@@ -1,0 +1,19 @@
+{
+  // Recommended VS Code extensions for this workspace.
+  // Install these to get the best development experience for the backend and frontend.
+  "recommendations": [
+    // Java / Backend
+    "redhat.java",
+    "vscjava.vscode-maven",
+    "pivotal.vscode-boot-dev-pack",
+
+    // JavaScript / TypeScript / React / Next.js
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-next",
+
+    // Tailwind CSS
+    "bradlc.vscode-tailwindcss"
+  ],
+  "unwantedRecommendations": []
+}
