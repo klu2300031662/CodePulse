@@ -31,8 +31,8 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const generatedUsername = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 10000);
-      
+      const baseName = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 12);
+      const generatedUsername = baseName + Math.floor(Math.random() * 10000);
       await AuthService.register({
         name: formData.name,
         email: formData.email,
