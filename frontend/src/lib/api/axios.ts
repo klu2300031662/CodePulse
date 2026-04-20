@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'https://codepulse-backend-ktl0.onrender.com'}/api`;
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://codepulse-backend-ktl0.onrender.com';
+const API_URL = `${rawApiUrl.replace(/\/+$/, '')}/api`;
 
 const api = axios.create({
   baseURL: API_URL,

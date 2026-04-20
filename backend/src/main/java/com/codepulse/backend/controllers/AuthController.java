@@ -145,8 +145,8 @@ public class AuthController {
         // Simplified JWT decoding (since frontend obtains directly from Google)
         // In full production, use GoogleIdTokenVerifier.
         String[] chunks = token.split("\\.");
-        java.util.Base64.Decoder decoder = java.util.Base64.getUrlDecoder();
-        String payloadJson = new String(decoder.decode(chunks[1]));
+        byte[] decodedBytes = org.springframework.util.Base64Utils.decodeFromUrlSafeString(chunks[1]);
+        String payloadJson = new String(decodedBytes);
         
         // Parse JSON (Using Jackson since it's available in Spring Boot)
         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
