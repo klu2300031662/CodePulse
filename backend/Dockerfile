@@ -4,9 +4,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN chmod +x mvnw
-RUN sed -i 's/\r$//' mvnw
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:17-jre
 
