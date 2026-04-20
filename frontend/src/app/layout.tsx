@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,9 +26,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <div className="bg-mesh-gradient"></div>
-          <div className="relative z-0">
-            {children}
-          </div>
+          <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'dummy-client-id.apps.googleusercontent.com'}>
+            <div className="relative z-0">
+              {children}
+            </div>
+          </GoogleOAuthProvider>
         </ThemeProvider>
       </body>
     </html>

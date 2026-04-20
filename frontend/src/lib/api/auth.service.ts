@@ -28,8 +28,8 @@ export const AuthService = {
     return response.data;
   },
 
-  googleDemo: async () => {
-    const response = await api.post('auth/google-demo');
+  googleLogin: async (credential: string) => {
+    const response = await api.post('auth/google', { credential });
     if (response.data.token) {
       localStorage.setItem('user', JSON.stringify(response.data));
     }

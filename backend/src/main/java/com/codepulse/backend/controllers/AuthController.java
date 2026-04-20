@@ -137,27 +137,55 @@ public class AuthController {
     return ResponseEntity.ok(new MessageResponse("Password has been successfully reset."));
   }
 
-  @PostMapping("/google-demo")
-  public ResponseEntity<?> googleDemo() {
-    String mockEmail = "demo.google." + java.util.UUID.randomUUID().toString().substring(0, 8) + "@example.com";
-    String mockUsername = "GoogleDemoUser_" + java.util.UUID.randomUUID().toString().substring(0, 5);
-    String mockPassword = "GoogleDemoPassword!123";
+  @PostMapping("/google")
+  public ResponseEntity<?> googleAuth(@RequestBody java.util.Map<String, String> payload) {
+    try {
+        String token = payload.get("credential");
+        
+        // Simplified JWT decoding (since frontend obtains directly from Google)
+        // In full production, use GoogleIdTokenVerifier.
+        String[] chunks = token.split("\\.");
+        java.util.Base64.Decoder decoder = java.util.Base64.getUrlDecoder();
+        String payloadJson = new String(decoder.decode(chunks[1]));
+        
+        // Parse JSON (Using Jackson since it's available in Spring Boot)
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        com.fasterxml.jackson.databind.JsonNode jsonNode = mapper.readTree(payloadJson);
+        
+        String email = jsonNode.get("email").asText();
+        String name = jsonNode.has("name") ? jsonNode.get("name").asText() : email.split("@")[0];
+        
+        User user;
+        java.util.Optional<User> userOpt = userRepository.findByEmail(email);
+        
+        if (userOpt.isPresent()) {
+            user = userOpt.get();
+        } else {
+            String tempUsername = "user_" + java.util.UUID.randomUUID().toString().substring(0, 8);
+            String randomPass = java.util.UUID.randomUUID().toString();
+            user = new User(tempUsername, email, encoder.encode(randomPass));
+            user.setName(name);
+            userRepository.save(user);
+        }
 
-    User user = new User(mockUsername, mockEmail, encoder.encode(mockPassword));
-    user.setName("Demo User");
-    userRepository.save(user);
+        // Create authentication token simply by using the user's username
+        org.springframework.security.core.userdetails.UserDetails userDetails = 
+             com.codepulse.backend.security.services.UserDetailsImpl.build(user);
 
-    Authentication authentication = authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(mockUsername, mockPassword));
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+            userDetails, null, userDetails.getAuthorities());
+            
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = jwtUtils.generateJwtToken(authentication);
 
-    SecurityContextHolder.getContext().setAuthentication(authentication);
-    String jwt = jwtUtils.generateJwtToken(authentication);
-    
-    UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();    
-
-    return ResponseEntity.ok(new JwtResponse(jwt, 
-                         userDetails.getId(), 
-                         userDetails.getUsername(), 
-                         userDetails.getEmail()));
+        return ResponseEntity.ok(new JwtResponse(jwt, 
+                             user.getId(), 
+                             user.getUsername(), 
+                             user.getEmail()));
+                             
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.badRequest().body(new MessageResponse("Error: Google authentication failed."));
+    }
   }
 }

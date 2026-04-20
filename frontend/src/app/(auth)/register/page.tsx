@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { AuthService } from '@/lib/api/auth.service';
 import { Eye, EyeOff } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -46,17 +47,23 @@ export default function RegisterPage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
     setError('');
     try {
-      await AuthService.googleDemo();
-      router.push('/dashboard');
+      if (credentialResponse.credential) {
+        await AuthService.googleLogin(credentialResponse.credential);
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Google Sign In failed.');
     } finally {
       setIsLoading(false);
     }
+  }
+
+  const handleGoogleError = () => {
+    setError('Google Sign In was unsuccessful.');
   }
 
   return (
@@ -142,15 +149,17 @@ export default function RegisterPage() {
             </div>
           </div>
           
-          <Button variant="outline" type="button" className="w-full gap-2" onClick={handleGoogleSignIn}>
-            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-              <path d="M12.0003 4.75001C13.7703 4.75001 15.3563 5.36001 16.6053 6.54901L20.0303 3.12601C17.9503 1.19201 15.2353 0 12.0003 0C7.31028 0 3.25528 2.69001 1.25028 6.60701L5.32228 9.77101C6.27628 6.74501 9.12328 4.75001 12.0003 4.75001Z" fill="#EA4335" />
-              <path d="M23.4903 12.275C23.4903 11.49 23.4153 10.73 23.2853 10H12.0003V14.51H18.4703C18.1803 16.1 17.2103 17.439 15.8903 18.319L19.8653 21.4C22.2053 19.249 23.4903 16.039 23.4903 12.275Z" fill="#4285F4" />
-              <path d="M5.32132 14.2289C5.07132 13.4869 4.94132 12.7219 4.94132 11.9999C4.94132 11.2779 5.07132 10.5129 5.32132 9.77094L1.24932 6.60693C0.463319 8.16393 0.000318857 9.99994 0.000318857 11.9999C0.000318857 13.9999 0.463319 15.8359 1.25032 17.3929L5.32132 14.2289Z" fill="#FBBC05" />
-              <path d="M12.0003 24.0001C15.2353 24.0001 17.9653 22.9351 19.8653 21.4001L15.8903 18.3201C14.8503 19.0111 13.5413 19.4501 12.0003 19.4501C9.12328 19.4501 6.27628 17.4561 5.32228 14.4301L1.25028 17.5941C3.25528 21.5111 7.31028 24.0001 12.0003 24.0001Z" fill="#34A853" />
-            </svg>
-            Sign up with Google
-          </Button>
+          <div className="flex justify-center w-full">
+            <GoogleLogin 
+              onSuccess={handleGoogleSuccess} 
+              onError={handleGoogleError}
+              text="signup_with"
+              theme="outline"
+              size="large"
+              shape="rectangular"
+              width="100%"
+            />
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2 text-center text-sm">
           <p className="text-muted-foreground">
