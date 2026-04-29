@@ -6,6 +6,7 @@ import com.codepulse.backend.security.services.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -56,7 +57,7 @@ public class WebSecurityConfig {
     return new BCryptPasswordEncoder();
   }
 
-  // ✅ FIXED CORS CONFIGURATION
+  // ✅ FIXED CORS CONFIG
   @Bean
   public UrlBasedCorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
@@ -82,7 +83,7 @@ public class WebSecurityConfig {
     http
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .csrf(csrf -> csrf.disable())
-        .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin())) // For H2 console
+        .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
         .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth.requestMatchers("/").permitAll()
@@ -90,6 +91,7 @@ public class WebSecurityConfig {
             .requestMatchers("/h2-console/**").permitAll()
             .requestMatchers("/api/auth/**").permitAll()
             .requestMatchers("/api/test/**").permitAll()
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 🔥 FIXED
             .anyRequest().authenticated());
 
     http.authenticationProvider(authenticationProvider());
