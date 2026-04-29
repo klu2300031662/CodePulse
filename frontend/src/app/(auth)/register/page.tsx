@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { AuthService } from '@/lib/api/auth.service';
 import { useAuthStore } from '@/lib/store/auth.store';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Code2 } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function RegisterPage() {
@@ -69,118 +69,155 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
-          <CardDescription>Enter your information to get started with CodePulse</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                placeholder="John Doe"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                placeholder="developer123"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="john@example.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
+      {/* Decorative floating elements */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-md">
+        {/* Logo / Brand */}
+        <div className="mb-8 flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 text-primary">
+            <Code2 className="h-8 w-8" />
+            <span className="text-2xl font-bold tracking-tight">CodePulse</span>
+          </div>
+          <p className="text-sm text-muted-foreground">Track, Analyze & Master Your Coding Journey</p>
+        </div>
+
+        <Card className="border-border/50 shadow-xl backdrop-blur-sm">
+          <CardHeader className="space-y-1 text-center pb-4">
+            <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
+            <CardDescription>Enter your information to get started with CodePulse</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
                 <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  id="name"
+                  placeholder="John Doe"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
+                  className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  placeholder="developer123"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  required
+                  className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    className="pr-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    required
+                    className="pr-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              {error && (
+                <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              )}
+              <Button
+                type="submit"
+                className="w-full font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-primary/25"
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating account..." : "Sign Up"}
+              </Button>
+            </form>
+            
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+            
+            <div className="flex justify-center w-full">
+              <GoogleLogin 
+                onSuccess={handleGoogleSuccess} 
+                onError={handleGoogleError}
+                text="signup_with"
+                theme="outline"
+                size="large"
+                shape="rectangular"
+                width="100%"
+              />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Sign Up"}
-            </Button>
-          </form>
-          
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-            </div>
-          </div>
-          
-          <div className="flex justify-center w-full">
-            <GoogleLogin 
-              onSuccess={handleGoogleSuccess} 
-              onError={handleGoogleError}
-              text="signup_with"
-              theme="outline"
-              size="large"
-              shape="rectangular"
-              width="100%"
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-2 text-center text-sm">
-          <p className="text-muted-foreground">
-            Already have an account?{' '}
-            <Link href="/login" className="font-semibold text-primary hover:underline">
-              Sign in
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-2 text-center text-sm pt-2">
+            <p className="text-muted-foreground">
+              Already have an account?{' '}
+              <Link href="/login" className="font-semibold text-primary hover:underline transition-colors">
+                Sign in
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+
+        {/* Bottom subtle branding */}
+        <p className="mt-6 text-center text-xs text-muted-foreground/60">
+          © 2026 CodePulse. Built for developers, by developers.
+        </p>
+      </div>
     </div>
   );
 }
