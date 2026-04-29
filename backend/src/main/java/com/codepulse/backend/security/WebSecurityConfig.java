@@ -84,31 +84,30 @@ public class WebSecurityConfig {
         .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
         .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
 
-        // 🔥 IMPORTANT: OAuth NEEDS SESSION
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+        // ✅ STATELESS — Google auth is handled manually via /api/auth/google
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(
                 "/",
                 "/health",
+                "/error",
                 "/h2-console/**",
                 "/api/auth/**",
                 "/api/test/**",
-
-                // 🔥 OAuth endpoints must be public
                 "/oauth2/**",
                 "/login/**")
             .permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-            .anyRequest().authenticated())
+            .anyRequest().authenticated());
 
-        // 🔥 GOOGLE LOGIN ENABLE
-        .oauth2Login(oauth -> oauth
-            .defaultSuccessUrl("https://code-pulse-iota.vercel.app", true));
+    // ✅ REMOVED .oauth2Login() — Google auth is handled manually via /api/auth/google endpoint.
+    // The OAuth2 login flow was intercepting requests and causing 401 when client registration
+    // properties were missing (especially in local dev without Google OAuth env vars).
 
     http.authenticationProvider(authenticationProvider());
 
-    // 🔥 VERY IMPORTANT: ADD JWT FILTER AFTER OAUTH
+    // ✅ JWT filter processes tokens on every request
     http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
