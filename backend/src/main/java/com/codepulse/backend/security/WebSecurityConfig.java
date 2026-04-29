@@ -40,10 +40,8 @@ public class WebSecurityConfig {
   @Bean
   public DaoAuthenticationProvider authenticationProvider() {
     DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-
     authProvider.setUserDetailsService(userDetailsService);
     authProvider.setPasswordEncoder(passwordEncoder());
-
     return authProvider;
   }
 
@@ -85,7 +83,9 @@ public class WebSecurityConfig {
         .csrf(csrf -> csrf.disable())
         .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
         .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+        // 🔥 IMPORTANT: OAuth NEEDS SESSION
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(
@@ -95,19 +95,20 @@ public class WebSecurityConfig {
                 "/api/auth/**",
                 "/api/test/**",
 
-                // ⭐ IMPORTANT (OAuth endpoints must be public)
+                // 🔥 OAuth endpoints must be public
                 "/oauth2/**",
                 "/login/**")
             .permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .anyRequest().authenticated())
 
-        // ⭐ ENABLE GOOGLE LOGIN
+        // 🔥 GOOGLE LOGIN ENABLE
         .oauth2Login(oauth -> oauth
-            .defaultSuccessUrl("/", true));
+            .defaultSuccessUrl("https://code-pulse-iota.vercel.app", true));
 
     http.authenticationProvider(authenticationProvider());
 
+    // 🔥 VERY IMPORTANT: ADD JWT FILTER AFTER OAUTH
     http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
