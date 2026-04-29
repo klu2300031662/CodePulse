@@ -57,7 +57,7 @@ public class WebSecurityConfig {
     return new BCryptPasswordEncoder();
   }
 
-  // ✅ FIXED CORS CONFIG
+  // ✅ CORS CONFIG
   @Bean
   public UrlBasedCorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
@@ -86,13 +86,25 @@ public class WebSecurityConfig {
         .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
         .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(auth -> auth.requestMatchers("/").permitAll()
-            .requestMatchers("/health").permitAll()
-            .requestMatchers("/h2-console/**").permitAll()
-            .requestMatchers("/api/auth/**").permitAll()
-            .requestMatchers("/api/test/**").permitAll()
-            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 🔥 FIXED
-            .anyRequest().authenticated());
+
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers(
+                "/",
+                "/health",
+                "/h2-console/**",
+                "/api/auth/**",
+                "/api/test/**",
+
+                // ⭐ IMPORTANT (OAuth endpoints must be public)
+                "/oauth2/**",
+                "/login/**")
+            .permitAll()
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            .anyRequest().authenticated())
+
+        // ⭐ ENABLE GOOGLE LOGIN
+        .oauth2Login(oauth -> oauth
+            .defaultSuccessUrl("/", true));
 
     http.authenticationProvider(authenticationProvider());
 
