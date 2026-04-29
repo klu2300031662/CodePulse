@@ -9,10 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { AuthService } from '@/lib/api/auth.service';
+import { useAuthStore } from '@/lib/store/auth.store';
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function LoginPage() {
   const router = useRouter();
+  const storeLogin = useAuthStore((state) => state.login);
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +26,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await AuthService.login(formData);
+      const userData = await AuthService.login(formData);
+      storeLogin(userData);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please verify credentials.');
@@ -38,7 +41,8 @@ export default function LoginPage() {
     setError('');
     try {
       if (credentialResponse.credential) {
-        await AuthService.googleLogin(credentialResponse.credential);
+        const userData = await AuthService.googleLogin(credentialResponse.credential);
+        storeLogin(userData);
         router.push('/dashboard');
       }
     } catch (err: any) {

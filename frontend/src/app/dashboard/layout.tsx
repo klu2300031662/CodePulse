@@ -2,8 +2,10 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, Code2, Terminal, UserSquare, Settings, LogOut, Activity, FolderArchive, Trophy, UserCircle, Medal } from "lucide-react"
+import { LayoutDashboard, Code2, Terminal, UserSquare, Settings, LogOut, Activity, FolderArchive, Trophy, UserCircle, Medal, Building2, Sun, Moon } from "lucide-react"
 import { useAuthStore } from "@/lib/store/auth.store"
+import { useTheme } from "next-themes"
+import { Button } from "@/components/ui/button"
 
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -11,6 +13,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter()
   const pathname = usePathname()
   const logout = useAuthStore((state) => state.logout)
+  const { theme, setTheme } = useTheme()
 
   const handleLogout = () => {
     logout()
@@ -49,6 +52,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <FolderArchive className="h-5 w-5" />
             <span className="font-medium">Projects</span>
           </Link>
+          <Link href="/dashboard/company" className={`flex items-center space-x-3 rounded-lg px-3 py-2 transition-all ${pathname?.startsWith('/dashboard/company') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-zinc-100 dark:hover:bg-zinc-900'}`}>
+            <Building2 className="h-5 w-5" />
+            <span className="font-medium">Company Prep</span>
+          </Link>
           <Link href="/dashboard/contests" className={`flex items-center space-x-3 rounded-lg px-3 py-2 transition-all ${pathname?.startsWith('/dashboard/contests') ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-zinc-100 dark:hover:bg-zinc-900'}`}>
             <Trophy className="h-5 w-5" />
             <span className="font-medium">Contests</span>
@@ -83,7 +90,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              className="h-9 w-9"
+            >
+              <Sun className="h-4 w-4 dark:hidden" />
+              <Moon className="h-4 w-4 hidden dark:block" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
             <Link href="/profile">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-colors border border-primary/20">
                 <UserCircle className="h-4 w-4 text-primary" />

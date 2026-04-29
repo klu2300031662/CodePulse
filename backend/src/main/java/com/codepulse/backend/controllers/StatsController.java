@@ -36,7 +36,9 @@ public class StatsController {
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) return null;
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof UserDetailsImpl)) return null;
+        UserDetailsImpl userDetails = (UserDetailsImpl) principal;
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
         return user.orElse(null);
     }

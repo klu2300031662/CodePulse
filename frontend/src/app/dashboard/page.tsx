@@ -59,10 +59,10 @@ export default function DashboardPage() {
           <CardContent className="p-8 flex flex-col items-center justify-center text-center relative">
             <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-blue-500/20 via-indigo-500/20 to-purple-500/20 dark:from-blue-500/10 dark:via-indigo-500/10 dark:to-purple-500/10" />
             <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center text-4xl font-bold text-white shadow-xl shadow-blue-500/20 ring-4 ring-white dark:ring-[#09090b] relative z-10 mb-4 transition-transform hover:scale-105">
-              {(user as any)?.name ? (user as any).name.charAt(0).toUpperCase() : user?.username?.charAt(0).toUpperCase() || 'D'}
+              {user?.name ? user.name.charAt(0).toUpperCase() : user?.username?.charAt(0).toUpperCase() || 'D'}
             </div>
             <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 relative z-10">
-              {(user as any)?.name || user?.username || 'Developer'}
+              {user?.name || user?.username || 'Developer'}
             </h3>
             <p className="text-sm font-medium text-muted-foreground mt-1 relative z-10">@{user?.username || 'dev_user'}</p>
           </CardContent>

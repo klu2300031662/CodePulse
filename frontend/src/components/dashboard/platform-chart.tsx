@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
-import api from '@/lib/api/axios'
+import { PlatformService } from '@/lib/api/platform.service'
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7']
 
@@ -11,9 +11,13 @@ export function PlatformChart() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/stats/platforms')
-      .then(res => {
-        setData(res.data)
+    PlatformService.getUserPlatforms()
+      .then(platforms => {
+        const chartData = platforms.map(p => ({
+          platform: p.platformName,
+          count: p.totalSolved
+        })).filter(d => d.count > 0)
+        setData(chartData)
         setLoading(false)
       })
       .catch(err => {
@@ -24,7 +28,7 @@ export function PlatformChart() {
 
   if (loading) return <div className="h-[300px] flex items-center justify-center">Loading...</div>
 
-  if (data.length === 0) return <div className="h-[300px] flex items-center justify-center text-muted-foreground">No data available</div>
+  if (data.length === 0) return <div className="h-[300px] flex items-center justify-center text-muted-foreground">No data available. Connect platforms to see distribution.</div>
 
   return (
     <div className="h-[300px] w-full">

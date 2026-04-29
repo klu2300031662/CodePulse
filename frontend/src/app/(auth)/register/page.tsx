@@ -8,12 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { AuthService } from '@/lib/api/auth.service';
+import { useAuthStore } from '@/lib/store/auth.store';
 import { Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const storeLogin = useAuthStore((state) => state.login);
+  const [formData, setFormData] = useState({ name: '', username: '', email: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -31,12 +33,10 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const baseName = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 12);
-      const generatedUsername = baseName + Math.floor(Math.random() * 10000);
       await AuthService.register({
         name: formData.name,
         email: formData.email,
-        username: generatedUsername,
+        username: formData.username,
         password: formData.password
       });
       router.push('/login');
@@ -52,7 +52,8 @@ export default function RegisterPage() {
     setError('');
     try {
       if (credentialResponse.credential) {
-        await AuthService.googleLogin(credentialResponse.credential);
+        const userData = await AuthService.googleLogin(credentialResponse.credential);
+        storeLogin(userData);
         router.push('/dashboard');
       }
     } catch (err: any) {
@@ -82,6 +83,16 @@ export default function RegisterPage() {
                 placeholder="John Doe"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                placeholder="developer123"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 required
               />
             </div>

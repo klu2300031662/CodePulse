@@ -24,5 +24,6 @@ com\codepulse\backend\security\jwt\AuthEntryPointJwt.class
 com\codepulse\backend\payload\response\MessageResponse.class
 com\codepulse\backend\repository\PlatformLinkRepository.class
 com\codepulse\backend\payload\request\CodeExecutionRequest.class
+com\codepulse\backend\controllers\HealthController.class
 com\codepulse\backend\controllers\ProblemController.class
 com\codepulse\backend\payload\response\CodeExecutionResponse.class

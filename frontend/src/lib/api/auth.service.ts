@@ -4,6 +4,7 @@ export const AuthService = {
   login: async (data: any) => {
     const response = await api.post('auth/signin', data);
     if (response.data.token) {
+      // Store in localStorage for the axios interceptor
       localStorage.setItem('user', JSON.stringify(response.data));
     }
     return response.data;

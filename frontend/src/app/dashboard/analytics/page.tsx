@@ -32,11 +32,11 @@ export default function AnalyticsPage() {
         { name: "Hard", value: hard, color: "#ef4444" },
       ]);
       setProblemsSolvedData([
-        { month: "Jan", solved: total > 0 ? total * 0.1 : 0 },
-        { month: "Feb", solved: total > 0 ? total * 0.2 : 0 },
-        { month: "Mar", solved: total > 0 ? total * 0.5 : 0 },
-        { month: "Apr", solved: total > 0 ? total * 0.7 : 0 },
-        { month: "May", solved: total > 0 ? total * 0.9 : 0 },
+        { month: "Jan", solved: total > 0 ? Math.round(total * 0.1) : 0 },
+        { month: "Feb", solved: total > 0 ? Math.round(total * 0.2) : 0 },
+        { month: "Mar", solved: total > 0 ? Math.round(total * 0.5) : 0 },
+        { month: "Apr", solved: total > 0 ? Math.round(total * 0.7) : 0 },
+        { month: "May", solved: total > 0 ? Math.round(total * 0.9) : 0 },
         { month: "Jun", solved: total },
       ]);
     }).catch(console.error);

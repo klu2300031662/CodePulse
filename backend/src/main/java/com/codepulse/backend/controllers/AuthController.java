@@ -45,10 +45,18 @@ public class AuthController {
     
     UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();    
 
+    // Look up the full user to get the name
+    String name = null;
+    java.util.Optional<User> userOpt = userRepository.findByUsername(userDetails.getUsername());
+    if (userOpt.isPresent()) {
+      name = userOpt.get().getName();
+    }
+
     return ResponseEntity.ok(new JwtResponse(jwt, 
                          userDetails.getId(), 
                          userDetails.getUsername(), 
-                         userDetails.getEmail()));
+                         userDetails.getEmail(),
+                         name));
   }
 
   @PostMapping("/signup")
@@ -99,7 +107,8 @@ public class AuthController {
     System.out.println("=================================================");
     System.out.println("SIMULATED EMAIL SENT TO: " + email);
     System.out.println("Reset Password Link:");
-    System.out.println("http://localhost:3000/reset-password?token=" + token);
+    String frontendUrl = System.getenv("FRONTEND_URL") != null ? System.getenv("FRONTEND_URL") : "http://localhost:3000";
+    System.out.println(frontendUrl + "/reset-password?token=" + token);
     System.out.println("=================================================");
 
     java.util.Map<String, String> response = new java.util.HashMap<>();
@@ -145,7 +154,11 @@ public class AuthController {
         // Simplified JWT decoding (since frontend obtains directly from Google)
         // In full production, use GoogleIdTokenVerifier.
         String[] chunks = token.split("\\.");
-        byte[] decodedBytes = org.springframework.util.Base64Utils.decodeFromUrlSafeString(chunks[1]);
+        // Fix Base64 padding — JWT segments may lack proper padding
+        String payloadSegment = chunks[1];
+        int paddingNeeded = (4 - payloadSegment.length() % 4) % 4;
+        payloadSegment = payloadSegment + "=".repeat(paddingNeeded);
+        byte[] decodedBytes = java.util.Base64.getUrlDecoder().decode(payloadSegment);
         String payloadJson = new String(decodedBytes);
         
         // Parse JSON (Using Jackson since it's available in Spring Boot)
@@ -181,7 +194,8 @@ public class AuthController {
         return ResponseEntity.ok(new JwtResponse(jwt, 
                              user.getId(), 
                              user.getUsername(), 
-                             user.getEmail()));
+                             user.getEmail(),
+                             user.getName()));
                              
     } catch (Exception e) {
         e.printStackTrace();

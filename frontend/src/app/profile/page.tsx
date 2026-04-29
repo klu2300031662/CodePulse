@@ -9,21 +9,21 @@ import { Github, Twitter, Linkedin, Link as LinkIcon, MapPin, Building, Calendar
 
 import { useEffect, useState } from "react"
 
-import { AuthService } from "@/lib/api/auth.service"
+import { useAuthStore } from "@/lib/store/auth.store"
 import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
 
 export default function ProfilePage() {
+  const authUser = useAuthStore((state) => state.user)
   const [user, setUser] = useState<any>(null)
   const [platforms, setPlatforms] = useState<PlatformLink[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const currentUser = AuthService.getCurrentUser()
-    if (currentUser) {
+    if (authUser) {
       setUser({
-        name: currentUser.username, // Using username as name since name is not in JWT
-        username: currentUser.username,
-        email: currentUser.email,
+        name: authUser.name || authUser.username,
+        username: authUser.username,
+        email: authUser.email,
         bio: "Passionate developer building the future of web applications.",
         location: "World Wide",
         company: "CodePulse",
@@ -44,7 +44,7 @@ export default function ProfilePage() {
     } else {
       setLoading(false)
     }
-  }, [])
+  }, [authUser])
 
   if (loading) {
     return <div className="min-h-screen border-zinc-50 dark:bg-[#09090b] flex items-center justify-center">Loading...</div>

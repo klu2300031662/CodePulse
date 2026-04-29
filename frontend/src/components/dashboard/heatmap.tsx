@@ -1,18 +1,34 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { format, subDays, eachDayOfInterval, startOfWeek, endOfWeek, isSameDay } from "date-fns"
+import { format, subDays, eachDayOfInterval, startOfWeek, endOfWeek } from "date-fns"
 import { Tooltip } from "react-tooltip"
-import api from "@/lib/api/axios"
+import { ProblemService } from "@/lib/api/problem.service"
 
 export function ActivityHeatmap() {
   const [activityData, setActivityData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/stats/heatmap')
-      .then(res => {
-        setActivityData(res.data)
+    ProblemService.getAll()
+      .then(problems => {
+        // Derive heatmap data from solved problems by counting problems per date
+        const dateCountMap: Record<string, number> = {}
+        if (Array.isArray(problems)) {
+          problems.forEach((p: any) => {
+            if (p.dateSolved) {
+              try {
+                const dateKey = format(new Date(p.dateSolved), "yyyy-MM-dd")
+                dateCountMap[dateKey] = (dateCountMap[dateKey] || 0) + 1
+              } catch (e) {}
+            }
+          })
+        }
+        const heatmapData = Object.entries(dateCountMap).map(([date, count]) => ({
+          date,
+          count
+        }))
+        setActivityData(heatmapData)
         setLoading(false)
       })
       .catch(err => {
