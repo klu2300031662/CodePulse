@@ -36,11 +36,8 @@
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
-    <!-- ✅ OAuth2 (VERY IMPORTANT) -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-oauth2-client</artifactId>
-    </dependency>
+    <!-- OAuth2 REMOVED: Google auth is handled manually via /api/auth/google endpoint.
+         The oauth2-client starter auto-configuration was interfering with the custom auth flow. -->
 
     <dependency>
       <groupId>org.springframework.boot</groupId>

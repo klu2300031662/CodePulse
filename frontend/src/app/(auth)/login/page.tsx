@@ -33,7 +33,7 @@ export default function LoginPage() {
       storeLogin(userData);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid username or password. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Invalid username or password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -49,7 +49,7 @@ export default function LoginPage() {
         router.push('/dashboard');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Google Sign In failed.');
+      setError(err.response?.data?.message || err.message || 'Google Sign In failed.');
     } finally {
       setIsLoading(false);
     }

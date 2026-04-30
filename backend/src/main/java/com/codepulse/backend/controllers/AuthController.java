@@ -9,11 +9,15 @@ import com.codepulse.backend.repository.UserRepository;
 import com.codepulse.backend.security.jwt.JwtUtils;
 import com.codepulse.backend.security.services.UserDetailsImpl;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +26,9 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+  private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
   @Autowired
   AuthenticationManager authenticationManager;
 
@@ -36,27 +43,40 @@ public class AuthController {
 
   @PostMapping("/signin")
   public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+    try {
+      Authentication authentication = authenticationManager.authenticate(
+          new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
-    Authentication authentication = authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+      SecurityContextHolder.getContext().setAuthentication(authentication);
+      String jwt = jwtUtils.generateJwtToken(authentication);
+      
+      UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();    
 
-    SecurityContextHolder.getContext().setAuthentication(authentication);
-    String jwt = jwtUtils.generateJwtToken(authentication);
-    
-    UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();    
+      // Look up the full user to get the name
+      String name = null;
+      java.util.Optional<User> userOpt = userRepository.findByUsername(userDetails.getUsername());
+      if (userOpt.isPresent()) {
+        name = userOpt.get().getName();
+      }
 
-    // Look up the full user to get the name
-    String name = null;
-    java.util.Optional<User> userOpt = userRepository.findByUsername(userDetails.getUsername());
-    if (userOpt.isPresent()) {
-      name = userOpt.get().getName();
+      return ResponseEntity.ok(new JwtResponse(jwt, 
+                           userDetails.getId(), 
+                           userDetails.getUsername(), 
+                           userDetails.getEmail(),
+                           name));
+    } catch (BadCredentialsException e) {
+      logger.warn("Login failed for user '{}': Bad credentials", loginRequest.getUsername());
+      return ResponseEntity.status(401)
+          .body(new MessageResponse("Error: Invalid username/email or password."));
+    } catch (AuthenticationException e) {
+      logger.error("Authentication error for user '{}': {}", loginRequest.getUsername(), e.getMessage());
+      return ResponseEntity.status(401)
+          .body(new MessageResponse("Error: Authentication failed - " + e.getMessage()));
+    } catch (Exception e) {
+      logger.error("Unexpected error during signin for user '{}': {}", loginRequest.getUsername(), e.getMessage(), e);
+      return ResponseEntity.status(500)
+          .body(new MessageResponse("Error: Login failed due to server error. Please try again later."));
     }
-
-    return ResponseEntity.ok(new JwtResponse(jwt, 
-                         userDetails.getId(), 
-                         userDetails.getUsername(), 
-                         userDetails.getEmail(),
-                         name));
   }
 
   @PostMapping("/signup")
@@ -73,16 +93,22 @@ public class AuthController {
           .body(new MessageResponse("Error: Email is already in use!"));
     }
 
-    // Create new user's account
-    User user = new User(signUpRequest.getUsername(), 
-               signUpRequest.getEmail(),
-               encoder.encode(signUpRequest.getPassword()));
-               
-    user.setName(signUpRequest.getName());
+    try {
+      // Create new user's account
+      User user = new User(signUpRequest.getUsername(), 
+                 signUpRequest.getEmail(),
+                 encoder.encode(signUpRequest.getPassword()));
+                 
+      user.setName(signUpRequest.getName());
 
-    userRepository.save(user);
+      userRepository.save(user);
 
-    return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+      return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+    } catch (Exception e) {
+      logger.error("Error during user registration: {}", e.getMessage(), e);
+      return ResponseEntity.status(500)
+          .body(new MessageResponse("Error: Registration failed - " + e.getMessage()));
+    }
   }
 
   @PostMapping("/forgot-password")
@@ -151,9 +177,17 @@ public class AuthController {
     try {
         String token = payload.get("credential");
         
+        if (token == null || token.trim().isEmpty()) {
+          return ResponseEntity.badRequest().body(new MessageResponse("Error: Google credential is required."));
+        }
+        
         // Simplified JWT decoding (since frontend obtains directly from Google)
         // In full production, use GoogleIdTokenVerifier.
         String[] chunks = token.split("\\.");
+        if (chunks.length < 2) {
+          return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid Google credential format."));
+        }
+        
         // Fix Base64 padding — JWT segments may lack proper padding
         String payloadSegment = chunks[1];
         int paddingNeeded = (4 - payloadSegment.length() % 4) % 4;
@@ -198,8 +232,8 @@ public class AuthController {
                              user.getName()));
                              
     } catch (Exception e) {
-        e.printStackTrace();
-        return ResponseEntity.badRequest().body(new MessageResponse("Error: Google authentication failed."));
+        logger.error("Google authentication error: {}", e.getMessage(), e);
+        return ResponseEntity.badRequest().body(new MessageResponse("Error: Google authentication failed - " + e.getMessage()));
     }
   }
 }

@@ -41,7 +41,7 @@ export default function RegisterPage() {
       });
       router.push('/login');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +57,7 @@ export default function RegisterPage() {
         router.push('/dashboard');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Google Sign In failed.');
+      setError(err.response?.data?.message || err.message || 'Google Sign In failed.');
     } finally {
       setIsLoading(false);
     }

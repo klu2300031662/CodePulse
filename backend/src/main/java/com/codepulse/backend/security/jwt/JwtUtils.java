@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 
@@ -22,8 +24,29 @@ public class JwtUtils {
   @Value("${jwt.expiration}")
   private int jwtExpirationMs;
 
+  private Key signingKey;
+
+  @PostConstruct
+  public void init() {
+    // Ensure the secret is at least 32 bytes for HS256
+    byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+    if (keyBytes.length < 32) {
+      logger.warn("JWT secret is too short ({} bytes). Padding to 32 bytes for HS256 compatibility.", keyBytes.length);
+      byte[] paddedKey = new byte[32];
+      System.arraycopy(keyBytes, 0, paddedKey, 0, keyBytes.length);
+      // Fill remaining bytes with a deterministic pattern
+      for (int i = keyBytes.length; i < 32; i++) {
+        paddedKey[i] = (byte) (keyBytes[i % keyBytes.length] ^ 0x5A);
+      }
+      signingKey = Keys.hmacShaKeyFor(paddedKey);
+    } else {
+      signingKey = Keys.hmacShaKeyFor(keyBytes);
+    }
+    logger.info("JWT signing key initialized successfully ({} bytes)", keyBytes.length);
+  }
+
   private Key key() {
-    return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    return signingKey;
   }
 
   public String generateJwtToken(Authentication authentication) {
