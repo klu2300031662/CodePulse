@@ -1,10 +1,16 @@
 package com.codepulse.backend.controllers;
 
+import com.codepulse.backend.exception.BadRequestException;
+import com.codepulse.backend.exception.ForbiddenException;
+import com.codepulse.backend.exception.ResourceNotFoundException;
+import com.codepulse.backend.exception.UnauthorizedException;
 import com.codepulse.backend.models.PlatformLink;
 import com.codepulse.backend.models.User;
 import com.codepulse.backend.repository.PlatformLinkRepository;
 import com.codepulse.backend.repository.UserRepository;
 import com.codepulse.backend.security.services.UserDetailsImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -20,6 +26,8 @@ import java.util.Optional;
 @RequestMapping("/api/platforms")
 public class PlatformLinkController {
 
+    private static final Logger logger = LoggerFactory.getLogger(PlatformLinkController.class);
+
     @Autowired
     private PlatformLinkRepository platformLinkRepository;
 
@@ -28,17 +36,21 @@ public class PlatformLinkController {
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) return null;
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new UnauthorizedException();
+        }
         Object principal = authentication.getPrincipal();
-        if (!(principal instanceof UserDetailsImpl)) return null;
+        if (!(principal instanceof UserDetailsImpl)) {
+            throw new UnauthorizedException();
+        }
         UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-        return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
+        return userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new UnauthorizedException("User account not found. Please log in again."));
     }
 
     @GetMapping
     public ResponseEntity<?> getUserPlatforms() {
         User user = getCurrentUser();
-        if (user == null) return ResponseEntity.badRequest().body("Not authenticated");
 
         List<PlatformLink> links = platformLinkRepository.findByUser(user);
         
@@ -63,8 +75,6 @@ public class PlatformLinkController {
                         String body = response.body();
                         if (body.contains("\"acSubmissionNum\"")) {
                             int total = 0, easy = 0, medium = 0, hard = 0;
-                            // Basic parsing since we don't want to add Jackson complexity right now if we can avoid it
-                            // The response looks like: "acSubmissionNum":[{"difficulty":"All","count":205},{"difficulty":"Easy","count":103},{"difficulty":"Medium","count":98},{"difficulty":"Hard","count":4}]
                             try {
                                 String[] parts = body.split("\"difficulty\":\"All\",\"count\":");
                                 if(parts.length > 1) total = Integer.parseInt(parts[1].split("}")[0]);
@@ -84,11 +94,13 @@ public class PlatformLinkController {
                                 link.setHardSolved(hard);
                                 link.setLastSyncedAt(LocalDateTime.now());
                                 platformLinkRepository.save(link);
-                            } catch (Exception e) {}
+                            } catch (Exception e) {
+                                logger.warn("Failed to parse LeetCode stats for user '{}': {}", link.getUsername(), e.getMessage());
+                            }
                         }
                     }
                 } catch (Exception e) {
-                    // Ignore errors during background sync
+                    logger.warn("Failed to sync LeetCode data for user '{}': {}", link.getUsername(), e.getMessage());
                 }
             }
         }
@@ -99,12 +111,11 @@ public class PlatformLinkController {
     @PostMapping
     public ResponseEntity<?> linkPlatform(@RequestBody PlatformLinkPayload payload) {
         User user = getCurrentUser();
-        if (user == null) return ResponseEntity.badRequest().body("Not authenticated");
 
         // Check if platform already linked
         Optional<PlatformLink> existing = platformLinkRepository.findByUserAndPlatformName(user, payload.getPlatformName());
         if (existing.isPresent()) {
-            return ResponseEntity.badRequest().body("Platform already linked to this account!");
+            throw new BadRequestException("Platform '" + payload.getPlatformName() + "' is already linked to your account.");
         }
 
         PlatformLink link = new PlatformLink(user, payload.getPlatformName(), payload.getUsername(), payload.getProfileUrl());
@@ -130,7 +141,7 @@ public class PlatformLinkController {
                 if (response.statusCode() == 200) {
                     String body = response.body();
                     if (body.contains("\"matchedUser\":null")) {
-                        throw new Exception("LeetCode user not found");
+                        throw new BadRequestException("LeetCode username '" + payload.getUsername() + "' not found. Please check and try again.");
                     }
                     if (body.contains("\"acSubmissionNum\"")) {
                         int total = 0, easy = 0, medium = 0, hard = 0;
@@ -146,18 +157,23 @@ public class PlatformLinkController {
                             
                             parts = body.split("\"difficulty\":\"Hard\",\"count\":");
                             if(parts.length > 1) hard = Integer.parseInt(parts[1].split("}")[0]);
-                        } catch (Exception e) {}
+                        } catch (Exception e) {
+                            logger.warn("Failed to parse LeetCode stats for user '{}': {}", payload.getUsername(), e.getMessage());
+                        }
                         
                         link.setTotalSolved(total);
                         link.setEasySolved(easy);
                         link.setMediumSolved(medium);
                         link.setHardSolved(hard);
                     } else {
-                        throw new Exception("Could not fetch data");
+                        throw new BadRequestException("Could not fetch LeetCode data. The API may be temporarily unavailable.");
                     }
                 }
+            } catch (BadRequestException e) {
+                throw e; // Re-throw our custom exception
             } catch (Exception e) {
-                return ResponseEntity.badRequest().body("Could not fetch LeetCode data. Check username.");
+                logger.error("Error fetching LeetCode data for '{}': {}", payload.getUsername(), e.getMessage());
+                throw new BadRequestException("Could not connect to LeetCode. Please check the username and try again.");
             }
         } else {
             // Mock syncing data for MVP for other platforms
@@ -174,17 +190,16 @@ public class PlatformLinkController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> removePlatform(@PathVariable Long id) {
         User user = getCurrentUser();
-        if (user == null) return ResponseEntity.badRequest().body("Not authenticated");
 
-        Optional<PlatformLink> linkOp = platformLinkRepository.findById(id);
-        if (linkOp.isPresent()) {
-            if (!linkOp.get().getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body("Not authorized");
-            }
-            platformLinkRepository.deleteById(id);
-            return ResponseEntity.ok("Platform link removed successfully");
+        PlatformLink link = platformLinkRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Platform link", "id", id));
+
+        if (!link.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("You do not have permission to remove this platform link.");
         }
-        return ResponseEntity.notFound().build();
+
+        platformLinkRepository.deleteById(id);
+        return ResponseEntity.ok("Platform link removed successfully");
     }
 }
 

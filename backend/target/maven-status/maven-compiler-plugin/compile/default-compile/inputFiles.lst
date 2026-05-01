@@ -5,6 +5,11 @@ C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backe
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\controllers\PlatformLinkController.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\controllers\ProblemController.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\controllers\StatsController.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\exception\BadRequestException.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\exception\ForbiddenException.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\exception\GlobalExceptionHandler.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\exception\ResourceNotFoundException.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\exception\UnauthorizedException.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\models\PlatformLink.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\models\Problem.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\models\User.java
@@ -12,6 +17,7 @@ C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backe
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\payload\request\LoginRequest.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\payload\request\SignupRequest.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\payload\response\CodeExecutionResponse.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\payload\response\ErrorResponse.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\payload\response\JwtResponse.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\payload\response\MessageResponse.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\repository\PlatformLinkRepository.java

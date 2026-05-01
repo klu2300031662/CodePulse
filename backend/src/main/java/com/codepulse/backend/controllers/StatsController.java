@@ -1,5 +1,6 @@
 package com.codepulse.backend.controllers;
 
+import com.codepulse.backend.exception.UnauthorizedException;
 import com.codepulse.backend.models.User;
 import com.codepulse.backend.models.PlatformLink;
 import com.codepulse.backend.repository.ProblemRepository;
@@ -35,18 +36,21 @@ public class StatsController {
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) return null;
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new UnauthorizedException();
+        }
         Object principal = authentication.getPrincipal();
-        if (!(principal instanceof UserDetailsImpl)) return null;
+        if (!(principal instanceof UserDetailsImpl)) {
+            throw new UnauthorizedException();
+        }
         UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-        Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
-        return user.orElse(null);
+        return userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new UnauthorizedException("User account not found. Please log in again."));
     }
 
     @GetMapping("/overview")
     public ResponseEntity<?> getOverviewStats() {
         User user = getCurrentUser();
-        if (user == null) return ResponseEntity.badRequest().body("User not authenticated");
 
         long totalSolved = problemRepository.countByUser(user);
         long easyCount = problemRepository.countByUserAndDifficultyIgnoreCase(user, "Easy");
@@ -124,7 +128,6 @@ public class StatsController {
     @GetMapping("/platforms")
     public ResponseEntity<?> getPlatformDistrib() {
         User user = getCurrentUser();
-        if (user == null) return ResponseEntity.badRequest().body("User not authenticated");
         
         List<Map<String, Object>> platformStats = problemRepository.countProblemsByPlatform(user);
         
@@ -157,7 +160,6 @@ public class StatsController {
     @GetMapping("/heatmap")
     public ResponseEntity<?> getHeatmap() {
         User user = getCurrentUser();
-        if (user == null) return ResponseEntity.badRequest().body("User not authenticated");
 
         List<Map<String, Object>> heatmapData = problemRepository.getProblemActivityHeatmap(user);
         return ResponseEntity.ok(heatmapData);

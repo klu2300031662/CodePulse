@@ -1,5 +1,8 @@
 package com.codepulse.backend.controllers;
 
+import com.codepulse.backend.exception.ForbiddenException;
+import com.codepulse.backend.exception.ResourceNotFoundException;
+import com.codepulse.backend.exception.UnauthorizedException;
 import com.codepulse.backend.models.Problem;
 import com.codepulse.backend.models.User;
 import com.codepulse.backend.repository.ProblemRepository;
@@ -13,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -28,18 +30,21 @@ public class ProblemController {
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) return null;
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new UnauthorizedException();
+        }
         Object principal = authentication.getPrincipal();
-        if (!(principal instanceof UserDetailsImpl)) return null;
+        if (!(principal instanceof UserDetailsImpl)) {
+            throw new UnauthorizedException();
+        }
         UserDetailsImpl userDetails = (UserDetailsImpl) principal;
-        return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
+        return userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new UnauthorizedException("User account not found. Please log in again."));
     }
 
     @GetMapping
     public ResponseEntity<?> getAllProblems() {
         User user = getCurrentUser();
-        if (user == null) return ResponseEntity.badRequest().body("Not authenticated");
-
         List<Problem> problems = problemRepository.findByUserOrderByDateSolvedDesc(user);
         return ResponseEntity.ok(problems);
     }
@@ -47,7 +52,6 @@ public class ProblemController {
     @PostMapping
     public ResponseEntity<?> addProblem(@RequestBody ProblemPayload payload) {
         User user = getCurrentUser();
-        if (user == null) return ResponseEntity.badRequest().body("Not authenticated");
 
         Problem problem = new Problem(user, payload.getTitle(), payload.getPlatform(), payload.getDifficulty(), payload.getStatus(), payload.getDateSolved() != null ? payload.getDateSolved() : LocalDate.now());
         problem.setUrl(payload.getUrl());
@@ -61,43 +65,40 @@ public class ProblemController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProblem(@PathVariable Long id, @RequestBody ProblemPayload payload) {
         User user = getCurrentUser();
-        if (user == null) return ResponseEntity.badRequest().body("Not authenticated");
 
-        Optional<Problem> problemOp = problemRepository.findById(id);
-        if (problemOp.isPresent()) {
-            Problem problem = problemOp.get();
-            if (!problem.getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body("Not authorized");
-            }
-            problem.setTitle(payload.getTitle());
-            problem.setPlatform(payload.getPlatform());
-            problem.setDifficulty(payload.getDifficulty());
-            problem.setStatus(payload.getStatus());
-            problem.setUrl(payload.getUrl());
-            problem.setNotes(payload.getNotes());
-            problem.setTags(payload.getTags());
-            if (payload.getDateSolved() != null) problem.setDateSolved(payload.getDateSolved());
-            
-            problemRepository.save(problem);
-            return ResponseEntity.ok(problem);
+        Problem problem = problemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Problem", "id", id));
+
+        if (!problem.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("You do not have permission to edit this problem.");
         }
-        return ResponseEntity.notFound().build();
+
+        problem.setTitle(payload.getTitle());
+        problem.setPlatform(payload.getPlatform());
+        problem.setDifficulty(payload.getDifficulty());
+        problem.setStatus(payload.getStatus());
+        problem.setUrl(payload.getUrl());
+        problem.setNotes(payload.getNotes());
+        problem.setTags(payload.getTags());
+        if (payload.getDateSolved() != null) problem.setDateSolved(payload.getDateSolved());
+        
+        problemRepository.save(problem);
+        return ResponseEntity.ok(problem);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProblem(@PathVariable Long id) {
         User user = getCurrentUser();
-        if (user == null) return ResponseEntity.badRequest().body("Not authenticated");
 
-        Optional<Problem> problemOp = problemRepository.findById(id);
-        if (problemOp.isPresent()) {
-            if (!problemOp.get().getUser().getId().equals(user.getId())) {
-                return ResponseEntity.status(403).body("Not authorized");
-            }
-            problemRepository.deleteById(id);
-            return ResponseEntity.ok("Deleted successfully");
+        Problem problem = problemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Problem", "id", id));
+
+        if (!problem.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("You do not have permission to delete this problem.");
         }
-        return ResponseEntity.notFound().build();
+
+        problemRepository.deleteById(id);
+        return ResponseEntity.ok("Deleted successfully");
     }
 }
 
