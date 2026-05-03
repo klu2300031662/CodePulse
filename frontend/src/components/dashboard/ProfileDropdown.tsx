@@ -1,0 +1,105 @@
+"use client"
+
+import { useRouter } from "next/navigation"
+import { useAuthStore } from "@/lib/store/auth.store"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { UserCircle, Edit, CreditCard, FileText, LogOut } from "lucide-react"
+
+export default function ProfileDropdown() {
+  const router = useRouter()
+  const user = useAuthStore((state) => state.user)
+  const logout = useAuthStore((state) => state.logout)
+
+  const handleLogout = () => {
+    logout()
+    router.push("/")
+  }
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : user?.username?.slice(0, 2).toUpperCase() || "CP"
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          id="profile-dropdown-trigger"
+          className="relative h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-sm font-semibold cursor-pointer hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-300 hover:scale-105 ring-2 ring-white/10 focus:outline-none focus:ring-2 focus:ring-violet-400/50"
+        >
+          {initials}
+          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#0a0a1a]" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="w-56 bg-[#12122a] border-white/10 text-white shadow-xl shadow-black/50 rounded-xl p-1"
+        sideOffset={8}
+      >
+        <DropdownMenuLabel className="px-3 py-2">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none text-white">
+              {user?.name || user?.username || "User"}
+            </p>
+            <p className="text-xs leading-none text-zinc-400">
+              {user?.email || "user@codepulse.dev"}
+            </p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="bg-white/10" />
+        <DropdownMenuItem
+          id="dropdown-profile"
+          className="px-3 py-2.5 cursor-pointer text-zinc-300 hover:text-white focus:text-white focus:bg-white/5 rounded-lg transition-colors"
+          onClick={() => router.push("/profile")}
+        >
+          <UserCircle className="mr-3 h-4 w-4 text-violet-400" />
+          Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          id="dropdown-edit-profile"
+          className="px-3 py-2.5 cursor-pointer text-zinc-300 hover:text-white focus:text-white focus:bg-white/5 rounded-lg transition-colors"
+          onClick={() => router.push("/settings")}
+        >
+          <Edit className="mr-3 h-4 w-4 text-blue-400" />
+          Edit Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          id="dropdown-profile-card"
+          className="px-3 py-2.5 cursor-pointer text-zinc-300 hover:text-white focus:text-white focus:bg-white/5 rounded-lg transition-colors"
+          onClick={() => router.push("/profile")}
+        >
+          <CreditCard className="mr-3 h-4 w-4 text-emerald-400" />
+          Profile Card
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          id="dropdown-my-sheets"
+          className="px-3 py-2.5 cursor-pointer text-zinc-300 hover:text-white focus:text-white focus:bg-white/5 rounded-lg transition-colors"
+          onClick={() => router.push("/dashboard/tracker")}
+        >
+          <FileText className="mr-3 h-4 w-4 text-amber-400" />
+          My Sheets
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className="bg-white/10" />
+        <DropdownMenuItem
+          id="dropdown-logout"
+          className="px-3 py-2.5 cursor-pointer text-red-400 hover:text-red-300 focus:text-red-300 focus:bg-red-500/10 rounded-lg transition-colors"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-3 h-4 w-4" />
+          Logout
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}

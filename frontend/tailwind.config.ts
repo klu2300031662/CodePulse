@@ -58,6 +58,15 @@ const config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        "slide-in-from-left": {
+          from: { transform: "translateX(-100%)", opacity: "0" },
+          to: { transform: "translateX(0)", opacity: "1" },
+        },
+      },
+      animation: {
+        "slide-in-left": "slide-in-from-left 0.3s ease-out",
+      },
     },
   },
   plugins: [],
