@@ -58,33 +58,33 @@ const customSheets: SheetItem[] = [
 ]
 
 const difficultyColors: Record<string, string> = {
-  Easy: "text-emerald-400 bg-emerald-500/10",
-  Medium: "text-amber-400 bg-amber-500/10",
-  Hard: "text-red-400 bg-red-500/10",
+  Easy: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10",
+  Medium: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10",
+  Hard: "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10",
 }
 
 export default function RecentSheets() {
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden">
+    <div className="rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden">
       <Tabs defaultValue="recent" className="w-full">
         {/* Header with tabs */}
-        <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-white/[0.06]">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
               <Clock className="h-4 w-4 text-white" />
             </div>
-            <h3 className="font-semibold text-white text-sm">Activity</h3>
+            <h3 className="font-semibold text-zinc-900 dark:text-white text-sm">Activity</h3>
           </div>
-          <TabsList className="bg-white/[0.04] border border-white/[0.06] h-8">
+          <TabsList className="bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.06] h-8">
             <TabsTrigger
               value="recent"
-              className="text-xs data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-zinc-400 h-6 px-3"
+              className="text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-white/[0.08] data-[state=active]:text-zinc-900 dark:data-[state=active]:text-white text-zinc-500 dark:text-zinc-400 h-6 px-3"
             >
               Recent
             </TabsTrigger>
             <TabsTrigger
               value="sheets"
-              className="text-xs data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-zinc-400 h-6 px-3"
+              className="text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-white/[0.08] data-[state=active]:text-zinc-900 dark:data-[state=active]:text-white text-zinc-500 dark:text-zinc-400 h-6 px-3"
             >
               Custom Sheets
             </TabsTrigger>
@@ -97,19 +97,19 @@ export default function RecentSheets() {
             {recentItems.map((item) => (
               <div
                 key={item.id}
-                className="group flex items-center gap-3 rounded-xl p-3 transition-all duration-200 hover:bg-white/[0.03] cursor-pointer"
+                className="group flex items-center gap-3 rounded-xl p-3 transition-all duration-200 hover:bg-zinc-50 dark:hover:bg-white/[0.03] cursor-pointer"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.04] border border-white/[0.06] flex-shrink-0">
-                  <FileText className="h-4 w-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.06] flex-shrink-0">
+                  <FileText className="h-4 w-4 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-200 group-hover:text-white truncate transition-colors">
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 group-hover:text-zinc-900 dark:group-hover:text-white truncate transition-colors">
                     {item.title}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-zinc-500">{item.platform}</span>
-                    <span className="text-zinc-700">·</span>
-                    <span className="text-[10px] text-zinc-600">{item.timestamp}</span>
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{item.platform}</span>
+                    <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-600">{item.timestamp}</span>
                   </div>
                 </div>
                 {item.difficulty && (
@@ -132,17 +132,17 @@ export default function RecentSheets() {
             {customSheets.map((sheet) => (
               <div
                 key={sheet.id}
-                className="group flex items-center gap-3 rounded-xl p-3 transition-all duration-200 hover:bg-white/[0.03] cursor-pointer"
+                className="group flex items-center gap-3 rounded-xl p-3 transition-all duration-200 hover:bg-zinc-50 dark:hover:bg-white/[0.03] cursor-pointer"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/20 to-blue-500/20 border border-violet-500/10 flex-shrink-0">
-                  <BookOpen className="h-4 w-4 text-violet-400" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 dark:bg-gradient-to-br dark:from-violet-500/20 dark:to-blue-500/20 border border-violet-100 dark:border-violet-500/10 flex-shrink-0">
+                  <BookOpen className="h-4 w-4 text-violet-500 dark:text-violet-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-200 group-hover:text-white truncate transition-colors">
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 group-hover:text-zinc-900 dark:group-hover:text-white truncate transition-colors">
                     {sheet.title}
                   </p>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div className="flex-1 h-1.5 rounded-full bg-zinc-100 dark:bg-white/[0.06] overflow-hidden">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-500 transition-all duration-700"
                         style={{
@@ -150,12 +150,12 @@ export default function RecentSheets() {
                         }}
                       />
                     </div>
-                    <span className="text-[10px] text-zinc-500 flex-shrink-0">
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500 flex-shrink-0">
                       {sheet.progress}/{sheet.count}
                     </span>
                   </div>
                 </div>
-                <ArrowRight className="h-3.5 w-3.5 text-zinc-600 group-hover:text-zinc-400 transition-all group-hover:translate-x-0.5 flex-shrink-0" />
+                <ArrowRight className="h-3.5 w-3.5 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 transition-all group-hover:translate-x-0.5 flex-shrink-0" />
               </div>
             ))}
           </div>

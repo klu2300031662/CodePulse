@@ -45,16 +45,16 @@ export default function LinkedPlatforms() {
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden">
+    <div className="rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+      <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-white/[0.06]">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500">
             <Link2 className="h-4 w-4 text-white" />
           </div>
-          <h3 className="font-semibold text-white text-sm">Linked Platforms</h3>
+          <h3 className="font-semibold text-zinc-900 dark:text-white text-sm">Linked Platforms</h3>
         </div>
-        <span className="text-xs text-zinc-500 font-medium">
+        <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
           {platforms.length} connected
         </span>
       </div>
@@ -63,41 +63,41 @@ export default function LinkedPlatforms() {
       <div className="p-3 space-y-1.5">
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <RefreshCw className="h-4 w-4 text-zinc-500 animate-spin" />
-            <span className="ml-2 text-sm text-zinc-500">Loading...</span>
+            <RefreshCw className="h-4 w-4 text-zinc-400 dark:text-zinc-500 animate-spin" />
+            <span className="ml-2 text-sm text-zinc-400 dark:text-zinc-500">Loading...</span>
           </div>
         ) : platforms.length > 0 ? (
           platforms.map((p) => (
             <div
               key={p.id}
-              className="rounded-xl border border-white/[0.04] overflow-hidden transition-all duration-300"
+              className="rounded-xl border border-zinc-100 dark:border-white/[0.04] overflow-hidden transition-all duration-300"
             >
               <button
                 id={`platform-${p.id}`}
                 onClick={() => toggleExpand(p.id)}
-                className={`w-full flex items-center gap-3 p-3 transition-all duration-200 hover:bg-white/[0.03] text-left ${
-                  expandedId === p.id ? "bg-white/[0.02]" : ""
+                className={`w-full flex items-center gap-3 p-3 transition-all duration-200 hover:bg-zinc-50 dark:hover:bg-white/[0.03] text-left ${
+                  expandedId === p.id ? "bg-zinc-50/50 dark:bg-white/[0.02]" : ""
                 }`}
               >
                 <span className="text-lg flex-shrink-0">
                   {platformIcons[p.platformName] || "🔗"}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-200 truncate">
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate">
                     {p.platformName}
                   </p>
-                  <p className="text-[11px] text-zinc-500 truncate">
+                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate">
                     @{displayName(p)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-md">
                     {p.totalSolved || 0} solved
                   </span>
                   {expandedId === p.id ? (
-                    <ChevronUp className="h-4 w-4 text-zinc-500" />
+                    <ChevronUp className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-zinc-500" />
+                    <ChevronDown className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
                   )}
                 </div>
               </button>
@@ -110,16 +110,16 @@ export default function LinkedPlatforms() {
                   } animate-in slide-in-from-top-2 duration-200`}
                 >
                   <div className="grid grid-cols-3 gap-2 mb-3">
-                    <div className="text-center p-2 rounded-lg bg-green-500/5 border border-green-500/10">
-                      <p className="text-lg font-bold text-green-400">{p.easySolved || 0}</p>
+                    <div className="text-center p-2 rounded-lg bg-green-50 dark:bg-green-500/5 border border-green-200 dark:border-green-500/10">
+                      <p className="text-lg font-bold text-green-600 dark:text-green-400">{p.easySolved || 0}</p>
                       <p className="text-[10px] text-zinc-500 font-medium">Easy</p>
                     </div>
-                    <div className="text-center p-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
-                      <p className="text-lg font-bold text-amber-400">{p.mediumSolved || 0}</p>
+                    <div className="text-center p-2 rounded-lg bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/10">
+                      <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{p.mediumSolved || 0}</p>
                       <p className="text-[10px] text-zinc-500 font-medium">Medium</p>
                     </div>
-                    <div className="text-center p-2 rounded-lg bg-red-500/5 border border-red-500/10">
-                      <p className="text-lg font-bold text-red-400">{p.hardSolved || 0}</p>
+                    <div className="text-center p-2 rounded-lg bg-red-50 dark:bg-red-500/5 border border-red-200 dark:border-red-500/10">
+                      <p className="text-lg font-bold text-red-600 dark:text-red-400">{p.hardSolved || 0}</p>
                       <p className="text-[10px] text-zinc-500 font-medium">Hard</p>
                     </div>
                   </div>
@@ -128,14 +128,14 @@ export default function LinkedPlatforms() {
                       href={p.profileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors py-2 rounded-lg border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03]"
+                      className="flex items-center justify-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors py-2 rounded-lg border border-zinc-200 dark:border-white/[0.06] hover:border-zinc-300 dark:hover:border-white/[0.12] hover:bg-zinc-50 dark:hover:bg-white/[0.03]"
                     >
                       <ExternalLink className="h-3 w-3" />
                       View Profile
                     </a>
                   )}
                   {p.lastSyncedAt && (
-                    <p className="text-[10px] text-zinc-600 text-center mt-2">
+                    <p className="text-[10px] text-zinc-400 dark:text-zinc-600 text-center mt-2">
                       Last synced: {new Date(p.lastSyncedAt).toLocaleDateString()}
                     </p>
                   )}
@@ -145,9 +145,9 @@ export default function LinkedPlatforms() {
           ))
         ) : (
           <div className="text-center py-8">
-            <Link2 className="h-8 w-8 text-zinc-700 mx-auto mb-3" />
+            <Link2 className="h-8 w-8 text-zinc-300 dark:text-zinc-700 mx-auto mb-3" />
             <p className="text-sm text-zinc-500">No platforms connected</p>
-            <p className="text-xs text-zinc-600 mt-1">
+            <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">
               Link your coding profiles to track progress
             </p>
           </div>

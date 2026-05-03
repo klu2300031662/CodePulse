@@ -38,14 +38,12 @@ function StatCard({ icon, label, value, gradient, glowColor, delay }: StatCardPr
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[#0f0f23]/80 backdrop-blur-xl p-6 transition-all duration-500 hover:border-white/[0.12] hover:translate-y-[-2px]`}
-      style={{
-        animationDelay: delay,
-      }}
+      className="group relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0f0f23]/80 backdrop-blur-xl p-6 transition-all duration-500 hover:border-zinc-300 dark:hover:border-white/[0.12] hover:translate-y-[-2px] hover:shadow-lg dark:hover:shadow-none"
+      style={{ animationDelay: delay }}
     >
       {/* Glow effect */}
       <div
-        className={`absolute -top-12 -right-12 h-32 w-32 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-30 ${glowColor}`}
+        className={`absolute -top-12 -right-12 h-32 w-32 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-20 dark:group-hover:opacity-30 ${glowColor}`}
       />
 
       {/* Gradient bar */}
@@ -55,10 +53,10 @@ function StatCard({ icon, label, value, gradient, glowColor, delay }: StatCardPr
 
       <div className="relative flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-2">
+          <p className="text-xs font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2">
             {label}
           </p>
-          <p className="text-3xl font-bold text-white tabular-nums">
+          <p className="text-3xl font-bold text-zinc-900 dark:text-white tabular-nums">
             {animatedValue.toLocaleString()}
           </p>
         </div>

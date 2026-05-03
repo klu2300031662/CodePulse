@@ -22,13 +22,13 @@ const platformColors: Record<string, string> = {
 }
 
 const platformBadgeColors: Record<string, string> = {
-  LeetCode: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  Codeforces: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  CodeChef: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  HackerRank: "bg-green-500/10 text-green-400 border-green-500/20",
-  HackerEarth: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-  AtCoder: "bg-gray-500/10 text-gray-400 border-gray-500/20",
-  default: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  LeetCode: "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20",
+  Codeforces: "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20",
+  CodeChef: "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20",
+  HackerRank: "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200 dark:border-green-500/20",
+  HackerEarth: "bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/20",
+  AtCoder: "bg-gray-50 dark:bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-500/20",
+  default: "bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-500/20",
 }
 
 function getTimeRemaining(startTime: number): string {
@@ -63,16 +63,16 @@ export default function ContestList() {
     .slice(0, 6)
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden">
+    <div className="rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+      <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-white/[0.06]">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500">
             <Trophy className="h-4 w-4 text-white" />
           </div>
-          <h3 className="font-semibold text-white text-sm">Upcoming Contests</h3>
+          <h3 className="font-semibold text-zinc-900 dark:text-white text-sm">Upcoming Contests</h3>
         </div>
-        <span className="text-xs text-zinc-500 font-medium">
+        <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
           {upcomingContests.length} upcoming
         </span>
       </div>
@@ -81,8 +81,8 @@ export default function ContestList() {
       <div className="p-3 space-y-1.5 max-h-[420px] overflow-y-auto scrollbar-thin">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-5 w-5 text-zinc-500 animate-spin" />
-            <span className="ml-2 text-sm text-zinc-500">Loading contests...</span>
+            <Loader2 className="h-5 w-5 text-zinc-400 dark:text-zinc-500 animate-spin" />
+            <span className="ml-2 text-sm text-zinc-400 dark:text-zinc-500">Loading contests...</span>
           </div>
         ) : upcomingContests.length > 0 ? (
           upcomingContests.map((contest, i) => (
@@ -90,7 +90,7 @@ export default function ContestList() {
               key={i}
               id={`contest-item-${i}`}
               onClick={() => window.open(contest.url, "_blank")}
-              className="w-full group flex items-center gap-3 rounded-xl p-3 transition-all duration-200 hover:bg-white/[0.04] text-left"
+              className="w-full group flex items-center gap-3 rounded-xl p-3 transition-all duration-200 hover:bg-zinc-50 dark:hover:bg-white/[0.04] text-left"
             >
               {/* Platform indicator */}
               <div
@@ -100,7 +100,7 @@ export default function ContestList() {
               />
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-zinc-200 group-hover:text-white truncate transition-colors">
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 group-hover:text-zinc-900 dark:group-hover:text-white truncate transition-colors">
                   {contest.title}
                 </p>
                 <div className="flex items-center gap-2 mt-1.5">
@@ -111,21 +111,21 @@ export default function ContestList() {
                   >
                     {contest.platform}
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-400 dark:text-zinc-500">
                     <Clock className="h-3 w-3" />
                     {getTimeRemaining(contest.startTime)}
                   </span>
                 </div>
               </div>
 
-              <ExternalLink className="h-3.5 w-3.5 text-zinc-600 group-hover:text-zinc-400 transition-colors flex-shrink-0" />
+              <ExternalLink className="h-3.5 w-3.5 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 transition-colors flex-shrink-0" />
             </button>
           ))
         ) : (
           <div className="text-center py-12">
-            <Trophy className="h-8 w-8 text-zinc-700 mx-auto mb-3" />
+            <Trophy className="h-8 w-8 text-zinc-300 dark:text-zinc-700 mx-auto mb-3" />
             <p className="text-sm text-zinc-500">No upcoming contests</p>
-            <p className="text-xs text-zinc-600 mt-1">Check back later for new contests</p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">Check back later for new contests</p>
           </div>
         )}
       </div>

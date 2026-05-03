@@ -36,64 +36,64 @@ export default function ProfileDropdown() {
       <DropdownMenuTrigger asChild>
         <button
           id="profile-dropdown-trigger"
-          className="relative h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-sm font-semibold cursor-pointer hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-300 hover:scale-105 ring-2 ring-white/10 focus:outline-none focus:ring-2 focus:ring-violet-400/50"
+          className="relative h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-sm font-semibold cursor-pointer hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-300 hover:scale-105 ring-2 ring-zinc-200 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-violet-400/50"
         >
           {initials}
-          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#0a0a1a]" />
+          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-white dark:border-[#0a0a1a]" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-56 bg-[#12122a] border-white/10 text-white shadow-xl shadow-black/50 rounded-xl p-1"
+        className="w-56 bg-white dark:bg-[#12122a] border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white shadow-xl shadow-black/10 dark:shadow-black/50 rounded-xl p-1"
         sideOffset={8}
       >
         <DropdownMenuLabel className="px-3 py-2">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none text-white">
+            <p className="text-sm font-medium leading-none text-zinc-900 dark:text-white">
               {user?.name || user?.username || "User"}
             </p>
-            <p className="text-xs leading-none text-zinc-400">
+            <p className="text-xs leading-none text-zinc-500 dark:text-zinc-400">
               {user?.email || "user@codepulse.dev"}
             </p>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-white/10" />
+        <DropdownMenuSeparator className="bg-zinc-100 dark:bg-white/10" />
         <DropdownMenuItem
           id="dropdown-profile"
-          className="px-3 py-2.5 cursor-pointer text-zinc-300 hover:text-white focus:text-white focus:bg-white/5 rounded-lg transition-colors"
+          className="px-3 py-2.5 cursor-pointer text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white focus:text-zinc-900 dark:focus:text-white focus:bg-zinc-50 dark:focus:bg-white/5 rounded-lg transition-colors"
           onClick={() => router.push("/profile")}
         >
-          <UserCircle className="mr-3 h-4 w-4 text-violet-400" />
+          <UserCircle className="mr-3 h-4 w-4 text-violet-500 dark:text-violet-400" />
           Profile
         </DropdownMenuItem>
         <DropdownMenuItem
           id="dropdown-edit-profile"
-          className="px-3 py-2.5 cursor-pointer text-zinc-300 hover:text-white focus:text-white focus:bg-white/5 rounded-lg transition-colors"
+          className="px-3 py-2.5 cursor-pointer text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white focus:text-zinc-900 dark:focus:text-white focus:bg-zinc-50 dark:focus:bg-white/5 rounded-lg transition-colors"
           onClick={() => router.push("/settings")}
         >
-          <Edit className="mr-3 h-4 w-4 text-blue-400" />
+          <Edit className="mr-3 h-4 w-4 text-blue-500 dark:text-blue-400" />
           Edit Profile
         </DropdownMenuItem>
         <DropdownMenuItem
           id="dropdown-profile-card"
-          className="px-3 py-2.5 cursor-pointer text-zinc-300 hover:text-white focus:text-white focus:bg-white/5 rounded-lg transition-colors"
+          className="px-3 py-2.5 cursor-pointer text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white focus:text-zinc-900 dark:focus:text-white focus:bg-zinc-50 dark:focus:bg-white/5 rounded-lg transition-colors"
           onClick={() => router.push("/profile")}
         >
-          <CreditCard className="mr-3 h-4 w-4 text-emerald-400" />
+          <CreditCard className="mr-3 h-4 w-4 text-emerald-500 dark:text-emerald-400" />
           Profile Card
         </DropdownMenuItem>
         <DropdownMenuItem
           id="dropdown-my-sheets"
-          className="px-3 py-2.5 cursor-pointer text-zinc-300 hover:text-white focus:text-white focus:bg-white/5 rounded-lg transition-colors"
+          className="px-3 py-2.5 cursor-pointer text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white focus:text-zinc-900 dark:focus:text-white focus:bg-zinc-50 dark:focus:bg-white/5 rounded-lg transition-colors"
           onClick={() => router.push("/dashboard/tracker")}
         >
-          <FileText className="mr-3 h-4 w-4 text-amber-400" />
+          <FileText className="mr-3 h-4 w-4 text-amber-500 dark:text-amber-400" />
           My Sheets
         </DropdownMenuItem>
-        <DropdownMenuSeparator className="bg-white/10" />
+        <DropdownMenuSeparator className="bg-zinc-100 dark:bg-white/10" />
         <DropdownMenuItem
           id="dropdown-logout"
-          className="px-3 py-2.5 cursor-pointer text-red-400 hover:text-red-300 focus:text-red-300 focus:bg-red-500/10 rounded-lg transition-colors"
+          className="px-3 py-2.5 cursor-pointer text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 focus:text-red-600 dark:focus:text-red-300 focus:bg-red-50 dark:focus:bg-red-500/10 rounded-lg transition-colors"
           onClick={handleLogout}
         >
           <LogOut className="mr-3 h-4 w-4" />

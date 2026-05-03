@@ -35,7 +35,7 @@ const prepCards: PrepCard[] = [
     icon: <BookOpen className="h-6 w-6" />,
     gradient: "from-blue-500 via-blue-600 to-indigo-600",
     glowColor: "bg-blue-500",
-    borderGlow: "group-hover:shadow-blue-500/20",
+    borderGlow: "group-hover:shadow-blue-500/10 dark:group-hover:shadow-blue-500/20",
     tag: "Interview",
   },
   {
@@ -48,7 +48,7 @@ const prepCards: PrepCard[] = [
     icon: <Sparkles className="h-6 w-6" />,
     gradient: "from-violet-500 via-purple-500 to-fuchsia-500",
     glowColor: "bg-violet-500",
-    borderGlow: "group-hover:shadow-violet-500/20",
+    borderGlow: "group-hover:shadow-violet-500/10 dark:group-hover:shadow-violet-500/20",
     tag: "DSA",
   },
   {
@@ -61,7 +61,7 @@ const prepCards: PrepCard[] = [
     icon: <Code2 className="h-6 w-6" />,
     gradient: "from-emerald-500 via-teal-500 to-cyan-500",
     glowColor: "bg-emerald-500",
-    borderGlow: "group-hover:shadow-emerald-500/20",
+    borderGlow: "group-hover:shadow-emerald-500/10 dark:group-hover:shadow-emerald-500/20",
     tag: "Placement",
   },
 ]
@@ -71,16 +71,16 @@ export default function PrepHub() {
 
   return (
     <>
-      <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden">
+      <div className="rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-white/[0.06]">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-white text-sm">Interview Prep</h3>
-              <p className="text-[11px] text-zinc-500">Curated resources for your next interview</p>
+              <h3 className="font-semibold text-zinc-900 dark:text-white text-sm">Interview Prep</h3>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">Curated resources for your next interview</p>
             </div>
           </div>
         </div>
@@ -92,11 +92,11 @@ export default function PrepHub() {
               key={i}
               id={`prep-card-${i}`}
               onClick={() => setSelectedCard(card)}
-              className={`group w-full relative overflow-hidden rounded-xl border border-white/[0.06] bg-[#0a0a1a]/60 p-4 transition-all duration-500 hover:border-white/[0.12] hover:translate-y-[-1px] ${card.borderGlow} hover:shadow-xl text-left`}
+              className={`group w-full relative overflow-hidden rounded-xl border border-zinc-100 dark:border-white/[0.06] bg-zinc-50/50 dark:bg-[#0a0a1a]/60 p-4 transition-all duration-500 hover:border-zinc-200 dark:hover:border-white/[0.12] hover:translate-y-[-1px] ${card.borderGlow} hover:shadow-xl text-left`}
             >
               {/* Hover glow */}
               <div
-                className={`absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-20 ${card.glowColor}`}
+                className={`absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-10 dark:group-hover:opacity-20 ${card.glowColor}`}
               />
 
               <div className="relative flex items-center gap-4">
@@ -107,16 +107,16 @@ export default function PrepHub() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-white group-hover:text-white/90 transition-colors">
+                    <span className="text-sm font-medium text-zinc-800 dark:text-white group-hover:text-zinc-900 dark:group-hover:text-white/90 transition-colors">
                       {card.title}
                     </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-400 font-medium">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-white/[0.06] text-zinc-500 dark:text-zinc-400 font-medium">
                       {card.tag}
                     </span>
                   </div>
-                  <p className="text-xs text-zinc-500 line-clamp-1">{card.description}</p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 line-clamp-1">{card.description}</p>
                 </div>
-                <ArrowRight className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 transition-all duration-300 group-hover:translate-x-1 flex-shrink-0" />
+                <ArrowRight className="h-4 w-4 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 transition-all duration-300 group-hover:translate-x-1 flex-shrink-0" />
               </div>
             </button>
           ))}
@@ -125,7 +125,7 @@ export default function PrepHub() {
 
       {/* Modal */}
       <Dialog open={!!selectedCard} onOpenChange={() => setSelectedCard(null)}>
-        <DialogContent className="bg-[#0f0f23] border-white/10 text-white sm:max-w-md rounded-2xl">
+        <DialogContent className="bg-white dark:bg-[#0f0f23] border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white sm:max-w-md rounded-2xl">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
               {selectedCard && (
@@ -136,15 +136,15 @@ export default function PrepHub() {
                 </div>
               )}
               <div>
-                <DialogTitle className="text-lg font-semibold text-white">
+                <DialogTitle className="text-lg font-semibold text-zinc-900 dark:text-white">
                   {selectedCard?.title}
                 </DialogTitle>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-400 font-medium">
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-white/[0.06] text-zinc-500 dark:text-zinc-400 font-medium">
                   {selectedCard?.tag}
                 </span>
               </div>
             </div>
-            <DialogDescription className="text-sm text-zinc-400 leading-relaxed pt-2">
+            <DialogDescription className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed pt-2">
               {selectedCard?.longDescription}
             </DialogDescription>
           </DialogHeader>
