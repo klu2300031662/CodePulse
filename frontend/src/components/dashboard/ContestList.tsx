@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import api from "@/lib/api/axios"
 import { Trophy, ExternalLink, Clock, Loader2 } from "lucide-react"
+import { useAuthStore } from "@/lib/store/auth.store"
 
 type Contest = {
   platform: string
@@ -46,8 +47,19 @@ function getTimeRemaining(startTime: number): string {
 export default function ContestList() {
   const [contests, setContests] = useState<Contest[]>([])
   const [loading, setLoading] = useState(true)
+  const user = useAuthStore((state) => state.user) as any
 
   useEffect(() => {
+    if (user?.isGuest) {
+      // Show mock contests for guest mode
+      setContests([
+        { platform: 'LeetCode', title: 'Weekly Contest 398', startTime: Math.floor((Date.now() + 2 * 86400000) / 1000), url: '#' },
+        { platform: 'Codeforces', title: 'Codeforces Round #950', startTime: Math.floor((Date.now() + 5 * 86400000) / 1000), url: '#' },
+        { platform: 'CodeChef', title: 'Starters 138', startTime: Math.floor((Date.now() + 7 * 86400000) / 1000), url: '#' },
+      ])
+      setLoading(false)
+      return
+    }
     api
       .get("/contests/all")
       .then((res) => {
@@ -55,7 +67,7 @@ export default function ContestList() {
       })
       .catch((err) => console.error("Contest fetch error", err))
       .finally(() => setLoading(false))
-  }, [])
+  }, [user?.isGuest])
 
   const upcomingContests = contests
     .filter((c) => c.startTime * 1000 > Date.now())

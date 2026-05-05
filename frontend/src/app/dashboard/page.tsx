@@ -22,7 +22,7 @@ export default function DashboardPage() {
 
       {/* Welcome header */}
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
           Welcome back{user?.name ? `, ${user.name.split(" ")[0]}` : ""} 👋
         </h1>
         <p className="text-sm text-zinc-500 mt-1">

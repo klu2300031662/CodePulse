@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, lazy, Suspense } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { useAuthStore } from '@/lib/store/auth.store';
 import { Eye, EyeOff, Code2, Zap, UserCircle2 } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import LoadingOverlay from '@/components/LoadingOverlay';
-import ReCaptchaBox, { type ReCaptchaHandle } from '@/components/ReCaptchaBox';
+import CaptchaBox, { type CaptchaHandle } from '@/components/CaptchaBox';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,15 +23,15 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const captchaRef = useRef<ReCaptchaHandle>(null);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const captchaRef = useRef<CaptchaHandle>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!captchaToken) {
-      setError('Please verify that you are not a robot.');
+    if (!captchaVerified) {
+      setError('Please complete the security captcha first.');
       return;
     }
 
@@ -49,7 +49,7 @@ export default function LoginPage() {
       setShowOverlay(false);
       setError(err.response?.data?.message || err.message || 'Invalid username or password. Please try again.');
       captchaRef.current?.reset();
-      setCaptchaToken(null);
+      setCaptchaVerified(false);
     } finally {
       setIsLoading(false);
     }
@@ -80,10 +80,11 @@ export default function LoginPage() {
   const handleGuestLogin = () => {
     setShowOverlay(true);
     loginAsGuest();
-    // Small delay for the overlay animation, then redirect
+    // Use window.location for a full navigation — guarantees the store
+    // is persisted and the dashboard layout picks up the guest user
     setTimeout(() => {
-      router.push('/dashboard');
-    }, 800);
+      window.location.href = '/dashboard';
+    }, 600);
   };
 
   return (
@@ -113,11 +114,12 @@ export default function LoginPage() {
               <CardDescription>Sign in to your account to continue</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username or Email</Label>
+                  <Label htmlFor="login-username">Username or Email</Label>
                   <Input
-                    id="username"
+                    id="login-username"
+                    name="login-username"
                     placeholder="Enter your username or email"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
@@ -128,7 +130,7 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="login-password">Password</Label>
                     <Link
                       href="/forgot-password"
                       className="text-xs text-primary hover:underline hover:text-primary/80 transition-colors"
@@ -138,7 +140,8 @@ export default function LoginPage() {
                   </div>
                   <div className="relative">
                     <Input
-                      id="password"
+                      id="login-password"
+                      name="login-password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       value={formData.password}
@@ -158,11 +161,11 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* reCAPTCHA */}
-                <ReCaptchaBox
+                {/* Custom Text CAPTCHA */}
+                <CaptchaBox
                   ref={captchaRef}
-                  onVerify={(token) => setCaptchaToken(token)}
-                  className="my-2"
+                  onVerify={(v) => setCaptchaVerified(v)}
+                  className="my-1"
                 />
 
                 {error && (
