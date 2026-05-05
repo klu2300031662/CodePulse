@@ -154,6 +154,25 @@ public class AuthController {
     return ResponseEntity.ok(new MessageResponse("Password reset instructions sent to your email."));
   }
 
+  @GetMapping("/validate-reset-token")
+  public ResponseEntity<?> validateResetToken(@RequestParam String token) {
+    if (token == null || token.trim().isEmpty()) {
+      return ResponseEntity.badRequest().body(new MessageResponse("Error: Token is required!"));
+    }
+
+    java.util.Optional<User> userOptional = userRepository.findByResetPasswordToken(token);
+    if (!userOptional.isPresent()) {
+      return ResponseEntity.badRequest().body(new MessageResponse("Error: This reset link has already been used or is invalid."));
+    }
+
+    User user = userOptional.get();
+    if (user.getResetPasswordTokenExpiry() == null || user.getResetPasswordTokenExpiry().isBefore(java.time.LocalDateTime.now())) {
+      return ResponseEntity.badRequest().body(new MessageResponse("Error: This reset link has expired. Please request a new one."));
+    }
+
+    return ResponseEntity.ok(new MessageResponse("Token is valid."));
+  }
+
   @PostMapping("/reset-password")
   public ResponseEntity<?> resetPassword(@RequestBody java.util.Map<String, String> payload) {
     String token = payload.get("token");

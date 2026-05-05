@@ -114,6 +114,21 @@ export const AuthService = {
     }
   },
 
+  validateResetToken: async (token: string) => {
+    try {
+      const response = await api.get(`auth/validate-reset-token?token=${encodeURIComponent(token)}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response) {
+        throw error;
+      } else if (error.request) {
+        throw new Error('Unable to reach the server. Please try again.');
+      } else {
+        throw new Error('An unexpected error occurred. Please try again.');
+      }
+    }
+  },
+
   googleLogin: async (credential: string) => {
     try {
       const response = await api.post('auth/google', { credential });
