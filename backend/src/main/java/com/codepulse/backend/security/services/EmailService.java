@@ -45,15 +45,17 @@ public class EmailService {
         }
 
         try {
+            String cleanApiKey = brevoApiKey.trim().replaceAll("[\\r\\n\\t]", "");
+            
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("api-key", brevoApiKey);
+            headers.set("api-key", cleanApiKey);
 
             // Brevo Send Transactional Email API
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("sender", Map.of("name", fromName, "email", fromEmail));
             body.put("to", List.of(Map.of("email", toEmail, "name", displayName)));
-            body.put("subject", "CodePulse — Reset Your Password");
+            body.put("subject", "CodePulse - Reset Your Password");
             body.put("htmlContent", htmlContent);
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
