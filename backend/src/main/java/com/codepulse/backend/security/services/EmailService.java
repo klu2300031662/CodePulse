@@ -48,20 +48,26 @@ public class EmailService {
 
         String htmlContent = buildEmailTemplate(displayName, resetLink);
 
+        // Unique reference to prevent Gmail from threading all resets together
+        String uniqueRef = String.valueOf(System.currentTimeMillis()).substring(6);
+
         // Build JSON body manually (no external dependencies needed)
         String jsonBody = String.format("""
             {
               "sender": {"name": "%s", "email": "%s"},
               "to": [{"email": "%s", "name": "%s"}],
-              "subject": "CodePulse - Reset Your Password",
-              "htmlContent": %s
+              "subject": "CodePulse - Reset Your Password (#%s)",
+              "htmlContent": %s,
+              "headers": {"X-Entity-Ref-ID": "%s"}
             }
             """,
             escapeJson(fromName),
             escapeJson(fromEmail),
             escapeJson(toEmail),
             escapeJson(displayName),
-            toJsonString(htmlContent)
+            uniqueRef,
+            toJsonString(htmlContent),
+            java.util.UUID.randomUUID().toString()
         );
 
         try {
