@@ -137,12 +137,23 @@ public class AuthController {
     }
 
     User user = userOptional.get();
-    String token = java.util.UUID.randomUUID().toString();
-    user.setResetPasswordToken(token);
-    user.setResetPasswordTokenExpiry(java.time.LocalDateTime.now().plusHours(1));
-    userRepository.save(user);
 
-    // Send real password reset email
+    // Reuse existing valid token so multiple "forgot password" requests
+    // all produce emails with the same working link
+    String token = user.getResetPasswordToken();
+    boolean hasValidToken = token != null
+        && user.getResetPasswordTokenExpiry() != null
+        && user.getResetPasswordTokenExpiry().isAfter(java.time.LocalDateTime.now());
+
+    if (!hasValidToken) {
+      // Generate a new token only if no valid one exists
+      token = java.util.UUID.randomUUID().toString();
+      user.setResetPasswordToken(token);
+      user.setResetPasswordTokenExpiry(java.time.LocalDateTime.now().plusHours(1));
+      userRepository.save(user);
+    }
+
+    // Send password reset email (with the same or new token)
     try {
       emailService.sendPasswordResetEmail(email, user.getName(), token);
     } catch (RuntimeException e) {
