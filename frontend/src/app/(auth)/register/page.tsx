@@ -192,7 +192,7 @@ export default function RegisterPage() {
               {/* Custom Text CAPTCHA */}
               <CaptchaBox
                 ref={captchaRef}
-                onVerify={(v) => setCaptchaVerified(v)}
+                onVerify={(v) => { setCaptchaVerified(v); if (v) setError(''); }}
                 className="my-1"
               />
 
