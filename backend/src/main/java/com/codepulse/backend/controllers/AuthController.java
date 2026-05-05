@@ -7,6 +7,7 @@ import com.codepulse.backend.payload.response.JwtResponse;
 import com.codepulse.backend.payload.response.MessageResponse;
 import com.codepulse.backend.repository.UserRepository;
 import com.codepulse.backend.security.jwt.JwtUtils;
+import com.codepulse.backend.security.services.EmailService;
 import com.codepulse.backend.security.services.UserDetailsImpl;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -40,6 +41,9 @@ public class AuthController {
 
   @Autowired
   JwtUtils jwtUtils;
+
+  @Autowired
+  EmailService emailService;
 
   @PostMapping("/signin")
   public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -81,6 +85,14 @@ public class AuthController {
 
   @PostMapping("/signup")
   public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+    // ── Gmail-only validation ──
+    String email = signUpRequest.getEmail();
+    if (email == null || !email.toLowerCase().endsWith("@gmail.com")) {
+      return ResponseEntity
+          .badRequest()
+          .body(new MessageResponse("Error: Only Gmail addresses (@gmail.com) are allowed for registration."));
+    }
+
     if (userRepository.existsByUsername(signUpRequest.getUsername())) {
       return ResponseEntity
           .badRequest()
@@ -119,29 +131,27 @@ public class AuthController {
       return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is required!"));
     }
     
-    java.util.Optional<com.codepulse.backend.models.User> userOptional = userRepository.findByEmail(email);
+    java.util.Optional<User> userOptional = userRepository.findByEmail(email);
     if (!userOptional.isPresent()) {
       return ResponseEntity.badRequest().body(new MessageResponse("Error: User with this email not found!"));
     }
 
-    com.codepulse.backend.models.User user = userOptional.get();
+    User user = userOptional.get();
     String token = java.util.UUID.randomUUID().toString();
     user.setResetPasswordToken(token);
     user.setResetPasswordTokenExpiry(java.time.LocalDateTime.now().plusHours(1));
     userRepository.save(user);
 
-    System.out.println("=================================================");
-    System.out.println("SIMULATED EMAIL SENT TO: " + email);
-    System.out.println("Reset Password Link:");
-    String frontendUrl = System.getenv("FRONTEND_URL") != null ? System.getenv("FRONTEND_URL") : "http://localhost:3000";
-    System.out.println(frontendUrl + "/reset-password?token=" + token);
-    System.out.println("=================================================");
+    // Send real password reset email
+    try {
+      emailService.sendPasswordResetEmail(email, user.getName(), token);
+    } catch (RuntimeException e) {
+      logger.error("Failed to send password reset email: {}", e.getMessage());
+      return ResponseEntity.status(500)
+          .body(new MessageResponse("Error: Failed to send reset email. Please try again later."));
+    }
 
-    java.util.Map<String, String> response = new java.util.HashMap<>();
-    response.put("message", "Password reset instructions sent to your email.");
-    response.put("resetToken", token); // for demo purpose
-
-    return ResponseEntity.ok(response);
+    return ResponseEntity.ok(new MessageResponse("Password reset instructions sent to your email."));
   }
 
   @PostMapping("/reset-password")
@@ -153,12 +163,12 @@ public class AuthController {
       return ResponseEntity.badRequest().body(new MessageResponse("Error: Token and new password are required!"));
     }
 
-    java.util.Optional<com.codepulse.backend.models.User> userOptional = userRepository.findByResetPasswordToken(token);
+    java.util.Optional<User> userOptional = userRepository.findByResetPasswordToken(token);
     if (!userOptional.isPresent()) {
       return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid or expired reset token!"));
     }
 
-    com.codepulse.backend.models.User user = userOptional.get();
+    User user = userOptional.get();
 
     if (user.getResetPasswordTokenExpiry() == null || user.getResetPasswordTokenExpiry().isBefore(java.time.LocalDateTime.now())) {
       return ResponseEntity.badRequest().body(new MessageResponse("Error: Reset token has expired!"));
@@ -217,7 +227,7 @@ public class AuthController {
 
         // Create authentication token simply by using the user's username
         org.springframework.security.core.userdetails.UserDetails userDetails = 
-             com.codepulse.backend.security.services.UserDetailsImpl.build(user);
+             UserDetailsImpl.build(user);
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
             userDetails, null, userDetails.getAuthorities());

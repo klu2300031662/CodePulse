@@ -28,6 +28,11 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
+    if (!formData.email.toLowerCase().endsWith('@gmail.com')) {
+      setError('Only Gmail addresses (@gmail.com) are allowed for registration.');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return;
