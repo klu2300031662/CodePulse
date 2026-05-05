@@ -85,13 +85,14 @@ export const AuthService = {
 
   forgotPassword: async (data: any) => {
     try {
-      const response = await api.post('auth/forgot-password', data);
+      // Longer timeout: SMTP on Render free tier can be slow
+      const response = await api.post('auth/forgot-password', data, { timeout: 60000 });
       return response.data;
     } catch (error: any) {
       if (error.response) {
         throw error;
       } else if (error.request) {
-        throw new Error('Unable to reach the server. Please try again.');
+        throw new Error('The server is taking too long to respond. It may be waking up — please wait 30 seconds and try again.');
       } else {
         throw new Error('An unexpected error occurred. Please try again.');
       }

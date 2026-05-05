@@ -113,6 +113,7 @@ public class EmailService {
             """.formatted(userName != null ? userName : "User", resetLink, resetLink);
 
         try {
+            logger.info("Attempting to send password reset email to: {} via {}", toEmail, fromEmail);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
@@ -122,10 +123,10 @@ public class EmailService {
             helper.setText(htmlContent, true); // true = isHtml
 
             mailSender.send(message);
-            logger.info("Password reset email sent to: {}", toEmail);
-        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
-            logger.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage(), e);
-            throw new RuntimeException("Failed to send password reset email. Please try again later.");
+            logger.info("Password reset email sent successfully to: {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send password reset email to {}: {} - {}", toEmail, e.getClass().getSimpleName(), e.getMessage(), e);
+            throw new RuntimeException("Failed to send password reset email: " + e.getMessage());
         }
     }
 }
