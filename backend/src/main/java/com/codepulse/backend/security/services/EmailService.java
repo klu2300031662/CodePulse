@@ -18,7 +18,7 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    @Value("${spring.mail.username:}")
+    @Value("${mail.from:${MAIL_FROM:${spring.mail.username:}}}")
     private String fromEmail;
 
     @Value("${frontend.url:http://localhost:3000}")
