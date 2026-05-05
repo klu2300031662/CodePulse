@@ -39,6 +39,11 @@ public class EmailService {
 
         String htmlContent = buildEmailTemplate(displayName, resetLink);
 
+        if (brevoApiKey == null || brevoApiKey.isBlank()) {
+            logger.error("BREVO_API_KEY is not configured! Cannot send email.");
+            throw new RuntimeException("Email service is not configured. Please set BREVO_API_KEY environment variable.");
+        }
+
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

@@ -148,7 +148,7 @@ public class AuthController {
     } catch (RuntimeException e) {
       logger.error("Failed to send password reset email: {}", e.getMessage());
       return ResponseEntity.status(500)
-          .body(new MessageResponse("Error: Failed to send reset email. Please try again later."));
+          .body(new MessageResponse("Error: " + e.getMessage()));
     }
 
     return ResponseEntity.ok(new MessageResponse("Password reset instructions sent to your email."));
