@@ -1,38 +1,82 @@
 package com.codepulse.backend.security.services;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.*;
 
 @Service
 public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
-    @Autowired
-    private JavaMailSender mailSender;
+    @Value("${brevo.api.key:${BREVO_API_KEY:}}")
+    private String brevoApiKey;
 
-    @Value("${mail.from:${MAIL_FROM:${spring.mail.username:}}}")
+    @Value("${mail.from:${MAIL_FROM:noreply@codepulse.app}}")
     private String fromEmail;
+
+    @Value("${mail.from.name:CodePulse}")
+    private String fromName;
 
     @Value("${frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
+    private final RestTemplate restTemplate = new RestTemplate();
+
     /**
-     * Send a password reset email with a styled HTML template.
+     * Send a password reset email via Brevo HTTP API.
+     * This uses HTTPS (port 443) which works on ALL hosting platforms
+     * including Render free tier (unlike SMTP ports 465/587 which are blocked).
      */
     public void sendPasswordResetEmail(String toEmail, String userName, String resetToken) {
         String resetLink = frontendUrl + "/reset-password?token=" + resetToken;
+        String displayName = (userName != null && !userName.isBlank()) ? userName : "User";
 
-        String subject = "CodePulse — Reset Your Password";
+        String htmlContent = buildEmailTemplate(displayName, resetLink);
 
-        String htmlContent = """
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", brevoApiKey);
+
+            // Brevo Send Transactional Email API
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("sender", Map.of("name", fromName, "email", fromEmail));
+            body.put("to", List.of(Map.of("email", toEmail, "name", displayName)));
+            body.put("subject", "CodePulse — Reset Your Password");
+            body.put("htmlContent", htmlContent);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+            logger.info("Sending password reset email to {} via Brevo API", toEmail);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                "https://api.brevo.com/v3/smtp/email",
+                HttpMethod.POST,
+                request,
+                String.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                logger.info("Password reset email sent successfully to: {} — response: {}", toEmail, response.getBody());
+            } else {
+                logger.error("Brevo API returned non-2xx: {} — {}", response.getStatusCode(), response.getBody());
+                throw new RuntimeException("Email service returned status " + response.getStatusCode());
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to send email to {}: {} — {}", toEmail, e.getClass().getSimpleName(), e.getMessage(), e);
+            throw new RuntimeException("Failed to send password reset email: " + e.getMessage());
+        }
+    }
+
+    private String buildEmailTemplate(String userName, String resetLink) {
+        return """
             <!DOCTYPE html>
             <html>
             <head>
@@ -45,7 +89,7 @@ public class EmailService {
                   <td align="center">
                     <table width="100%%" cellpadding="0" cellspacing="0" style="max-width:520px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
-                      <!-- Header with gradient -->
+                      <!-- Header -->
                       <tr>
                         <td style="background: linear-gradient(135deg, #7c3aed, #3b82f6); padding:32px 40px; text-align:center;">
                           <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:700; letter-spacing:-0.5px;">
@@ -110,23 +154,6 @@ public class EmailService {
               </table>
             </body>
             </html>
-            """.formatted(userName != null ? userName : "User", resetLink, resetLink);
-
-        try {
-            logger.info("Attempting to send password reset email to: {} via {}", toEmail, fromEmail);
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail, "CodePulse");
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(htmlContent, true); // true = isHtml
-
-            mailSender.send(message);
-            logger.info("Password reset email sent successfully to: {}", toEmail);
-        } catch (Exception e) {
-            logger.error("Failed to send password reset email to {}: {} - {}", toEmail, e.getClass().getSimpleName(), e.getMessage(), e);
-            throw new RuntimeException("Failed to send password reset email: " + e.getMessage());
-        }
+            """.formatted(userName, resetLink, resetLink);
     }
 }
