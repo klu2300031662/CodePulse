@@ -11,7 +11,7 @@ const api = axios.create({
   timeout: 30000, // 30s timeout (Render free tier cold starts)
 });
 
-// ── Request Interceptor: Attach JWT token ──
+// ── Request Interceptor: Attach JWT token (skip for guest mode) ──
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const userStr = localStorage.getItem('user');
@@ -19,7 +19,8 @@ api.interceptors.request.use((config) => {
     if (userStr) {
       const user = JSON.parse(userStr);
 
-      if (user.token) {
+      // Skip attaching token for guest users — they don't have a real JWT
+      if (user.token && !user.isGuest) {
         config.headers.Authorization = `Bearer ${user.token}`;
       }
     }

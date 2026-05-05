@@ -1,5 +1,43 @@
 import api from './axios';
 
+// ── Session token cache helpers ──
+const SESSION_CACHE_KEY = 'cp_session_cache';
+const SESSION_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+interface SessionCache {
+  data: any;
+  timestamp: number;
+}
+
+function getCachedSession(): any | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const cached = localStorage.getItem(SESSION_CACHE_KEY);
+    if (!cached) return null;
+    const parsed: SessionCache = JSON.parse(cached);
+    // Check if cache is still valid
+    if (Date.now() - parsed.timestamp < SESSION_CACHE_TTL) {
+      return parsed.data;
+    }
+    // Expired — clear it
+    localStorage.removeItem(SESSION_CACHE_KEY);
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedSession(data: any): void {
+  if (typeof window === 'undefined') return;
+  const cache: SessionCache = { data, timestamp: Date.now() };
+  localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(cache));
+}
+
+function clearCachedSession(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(SESSION_CACHE_KEY);
+}
+
 export const AuthService = {
   login: async (data: any) => {
     try {
@@ -7,6 +45,8 @@ export const AuthService = {
       if (response.data.token) {
         // Store in localStorage for the axios interceptor
         localStorage.setItem('user', JSON.stringify(response.data));
+        // Cache the session to skip re-authentication on revisit
+        setCachedSession(response.data);
       }
       return response.data;
     } catch (error: any) {
@@ -40,6 +80,7 @@ export const AuthService = {
 
   logout: () => {
     localStorage.removeItem('user');
+    clearCachedSession();
   },
 
   forgotPassword: async (data: any) => {
@@ -77,6 +118,7 @@ export const AuthService = {
       const response = await api.post('auth/google', { credential });
       if (response.data.token) {
         localStorage.setItem('user', JSON.stringify(response.data));
+        setCachedSession(response.data);
       }
       return response.data;
     } catch (error: any) {
@@ -97,4 +139,15 @@ export const AuthService = {
     }
     return null;
   },
+
+  /**
+   * Check if there's a cached valid session.
+   * Returning users skip the login API call if their session is still valid.
+   */
+  getCachedSession,
+
+  /**
+   * Clear the cached session (e.g. on logout or token expiry)
+   */
+  clearCachedSession,
 };

@@ -7,12 +7,15 @@ interface User {
   name?: string;
   email: string;
   token: string;
+  isGuest?: boolean;
 }
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  isGuest: boolean;
   login: (user: User) => void;
+  loginAsGuest: () => void;
   logout: () => void;
 }
 
@@ -21,15 +24,29 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      isGuest: false,
       login: (user) => {
         // Also store in localStorage for axios interceptor compatibility
         localStorage.setItem('user', JSON.stringify(user));
-        set({ user, isAuthenticated: true });
+        set({ user, isAuthenticated: true, isGuest: false });
+      },
+      loginAsGuest: () => {
+        const guestUser: User = {
+          id: 0,
+          username: 'guest_user',
+          name: 'Guest User',
+          email: 'guest@codepulse.demo',
+          token: 'guest-mode-token',
+          isGuest: true,
+        };
+        // Don't store guest token for axios — guest doesn't hit real APIs
+        localStorage.setItem('user', JSON.stringify(guestUser));
+        set({ user: guestUser, isAuthenticated: true, isGuest: true });
       },
       logout: () => {
         // Clear both zustand persisted state AND the 'user' key used by axios interceptor
         localStorage.removeItem('user');
-        set({ user: null, isAuthenticated: false });
+        set({ user: null, isAuthenticated: false, isGuest: false });
       },
     }),
     {

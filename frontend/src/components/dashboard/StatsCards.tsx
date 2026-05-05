@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
 import { Hash, CheckCircle2, Star } from "lucide-react"
+import { useAuthStore } from "@/lib/store/auth.store"
+import { GUEST_PLATFORMS } from "@/lib/guest-data"
 
 interface StatCardProps {
   icon: React.ReactNode
@@ -72,12 +74,18 @@ function StatCard({ icon, label, value, gradient, glowColor, delay }: StatCardPr
 
 export default function StatsCards() {
   const [platforms, setPlatforms] = useState<PlatformLink[]>([])
+  const user = useAuthStore((state) => state.user) as any
 
   useEffect(() => {
+    if (user?.isGuest) {
+      // Use mock data for guest mode — no API calls
+      setPlatforms(GUEST_PLATFORMS as any)
+      return
+    }
     PlatformService.getUserPlatforms()
       .then((res) => setPlatforms(res))
       .catch((err) => console.error(err))
-  }, [])
+  }, [user?.isGuest])
 
   const totalQuestions = platforms.reduce((sum, p) => sum + (p.totalSolved || 0), 0)
   const completedQuestions = platforms.reduce(

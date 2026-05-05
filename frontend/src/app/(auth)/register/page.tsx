@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { AuthService } from '@/lib/api/auth.service';
 import { useAuthStore } from '@/lib/store/auth.store';
 import { Eye, EyeOff, Code2 } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
+import ReCaptchaBox, { type ReCaptchaHandle } from '@/components/ReCaptchaBox';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -20,6 +21,8 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<ReCaptchaHandle>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +30,11 @@ export default function RegisterPage() {
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
+      return;
+    }
+
+    if (!captchaToken) {
+      setError('Please verify that you are not a robot.');
       return;
     }
 
@@ -42,6 +50,8 @@ export default function RegisterPage() {
       router.push('/login');
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.');
+      captchaRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -168,6 +178,14 @@ export default function RegisterPage() {
                   </button>
                 </div>
               </div>
+
+              {/* reCAPTCHA */}
+              <ReCaptchaBox
+                ref={captchaRef}
+                onVerify={(token) => setCaptchaToken(token)}
+                className="my-2"
+              />
+
               {error && (
                 <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
                   <p className="text-sm text-destructive">{error}</p>

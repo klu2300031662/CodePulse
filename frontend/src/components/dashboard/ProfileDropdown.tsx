@@ -39,7 +39,11 @@ export default function ProfileDropdown() {
           className="relative h-9 w-9 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-sm font-semibold cursor-pointer hover:shadow-lg hover:shadow-violet-500/25 transition-all duration-300 hover:scale-105 ring-2 ring-zinc-200 dark:ring-white/10 focus:outline-none focus:ring-2 focus:ring-violet-400/50"
         >
           {initials}
-          <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-white dark:border-[#0a0a1a]" />
+          {(user as any)?.isGuest ? (
+            <span className="absolute -bottom-0.5 -right-0.5 px-1 py-px rounded-full bg-amber-500 border-2 border-white dark:border-[#0a0a1a] text-[7px] font-bold text-white leading-none">G</span>
+          ) : (
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-white dark:border-[#0a0a1a]" />
+          )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent

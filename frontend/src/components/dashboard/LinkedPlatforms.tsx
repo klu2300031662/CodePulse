@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
 import { Link2, ChevronDown, ChevronUp, ExternalLink, RefreshCw } from "lucide-react"
+import { useAuthStore } from "@/lib/store/auth.store"
+import { GUEST_PLATFORMS } from "@/lib/guest-data"
 
 const platformIcons: Record<string, string> = {
   LeetCode: "🟡",
@@ -28,13 +30,19 @@ export default function LinkedPlatforms() {
   const [platforms, setPlatforms] = useState<PlatformLink[]>([])
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const user = useAuthStore((state) => state.user) as any
 
   useEffect(() => {
+    if (user?.isGuest) {
+      setPlatforms(GUEST_PLATFORMS as any)
+      setLoading(false)
+      return
+    }
     PlatformService.getUserPlatforms()
       .then((res) => setPlatforms(res))
       .catch((err) => console.error(err))
       .finally(() => setLoading(false))
-  }, [])
+  }, [user?.isGuest])
 
   const toggleExpand = (id: number) => {
     setExpandedId(expandedId === id ? null : id)

@@ -10,19 +10,26 @@ import PrepHub from "@/components/dashboard/PrepHub"
 import CompanyPrep from "@/components/dashboard/CompanyPrep"
 import LinkedPlatforms from "@/components/dashboard/LinkedPlatforms"
 import Achievements from "@/components/dashboard/Achievements"
+import GuestBanner from "@/components/dashboard/GuestBanner"
 
 export default function DashboardPage() {
-  const user = useAuthStore((state) => state.user)
+  const user = useAuthStore((state) => state.user) as any
 
   return (
     <div className="space-y-6">
+      {/* Guest Mode Banner */}
+      {user?.isGuest && <GuestBanner />}
+
       {/* Welcome header */}
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight">
           Welcome back{user?.name ? `, ${user.name.split(" ")[0]}` : ""} 👋
         </h1>
         <p className="text-sm text-zinc-500 mt-1">
-          Here&apos;s your coding progress overview
+          {user?.isGuest 
+            ? "Explore CodePulse with demo data — sign up to track your real progress" 
+            : "Here\u0027s your coding progress overview"
+          }
         </p>
       </div>
 
