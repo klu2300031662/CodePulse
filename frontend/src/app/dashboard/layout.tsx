@@ -76,15 +76,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 relative border ${
+                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-500 relative border overflow-hidden ${
                   active
-                    ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white border-violet-300 dark:border-violet-500/30 shadow-md shadow-violet-500/10 dark:shadow-violet-500/20 -translate-y-[1px]"
-                    : "border-transparent text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06] hover:border-violet-300/70 dark:hover:border-violet-500/25 hover:shadow-md hover:shadow-violet-500/10 dark:hover:shadow-violet-500/15 hover:-translate-y-[1px]"
+                    ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white border-violet-300 dark:border-violet-500/30 shadow-lg shadow-violet-500/10 dark:shadow-violet-500/20 -translate-y-[1px]"
+                    : "border-transparent text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] hover:border-violet-300 dark:hover:border-violet-500/25 hover:shadow-lg hover:shadow-violet-500/10 dark:hover:shadow-violet-500/15 hover:-translate-y-[2px]"
                 }`}
               >
-                {/* Gradient top bar — visible on active and hover */}
-                <div className={`absolute top-0 left-2 right-2 h-[2px] rounded-b-full bg-gradient-to-r from-violet-500 to-blue-500 transition-opacity duration-300 ${
-                  active ? "opacity-60" : "opacity-0 group-hover:opacity-40"
+                {/* Glow orb — appears on hover like stat cards */}
+                <div className={`absolute -top-8 -right-8 h-24 w-24 rounded-full bg-violet-500 blur-2xl transition-opacity duration-500 ${
+                  active ? "opacity-10 dark:opacity-20" : "opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20"
+                }`} />
+
+                {/* Gradient top bar */}
+                <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-500 to-blue-500 transition-opacity duration-300 ${
+                  active ? "opacity-60" : "opacity-0 group-hover:opacity-50"
                 }`} />
 
                 {/* Active indicator left bar */}
@@ -92,13 +97,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-gradient-to-b from-violet-500 to-blue-500 dark:from-violet-400 dark:to-blue-400" />
                 )}
                 <item.icon
-                  className={`h-[18px] w-[18px] transition-all duration-200 ${
+                  className={`relative h-[18px] w-[18px] transition-all duration-200 ${
                     active
                       ? "text-violet-500 dark:text-violet-400"
                       : "text-zinc-400 dark:text-zinc-600 group-hover:text-violet-500 dark:group-hover:text-violet-400 group-hover:scale-110"
                   }`}
                 />
-                <span className="transition-all duration-200">{item.label}</span>
+                <span className="relative transition-all duration-200">{item.label}</span>
               </Link>
             )
           })}
@@ -108,14 +113,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="border-t border-zinc-200 dark:border-white/[0.06] p-3">
           <Link
             href="/settings"
-            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 border ${
+            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-500 border overflow-hidden relative ${
               pathname?.startsWith("/settings")
-                ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white border-violet-300 dark:border-violet-500/30 shadow-md shadow-violet-500/10"
-                : "border-transparent text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06] hover:border-violet-300/70 dark:hover:border-violet-500/25 hover:shadow-md hover:shadow-violet-500/10 hover:-translate-y-[1px]"
+                ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white border-violet-300 dark:border-violet-500/30 shadow-lg shadow-violet-500/10"
+                : "border-transparent text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] hover:border-violet-300 dark:hover:border-violet-500/25 hover:shadow-lg hover:shadow-violet-500/10 hover:-translate-y-[2px]"
             }`}
           >
-            <Settings className="h-[18px] w-[18px] text-zinc-400 dark:text-zinc-600 group-hover:text-violet-500 dark:group-hover:text-violet-400 group-hover:rotate-90 transition-all duration-300" />
-            <span>Settings</span>
+            <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-violet-500 blur-2xl opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-500" />
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-500 to-blue-500 opacity-0 group-hover:opacity-50 transition-opacity duration-300" />
+            <Settings className="relative h-[18px] w-[18px] text-zinc-400 dark:text-zinc-600 group-hover:text-violet-500 dark:group-hover:text-violet-400 group-hover:rotate-90 transition-all duration-300" />
+            <span className="relative">Settings</span>
           </Link>
         </div>
       </aside>

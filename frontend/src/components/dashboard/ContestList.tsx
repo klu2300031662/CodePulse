@@ -75,7 +75,8 @@ export default function ContestList() {
     .slice(0, 6)
 
   return (
-    <div className="rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden">
+    <div className="group relative rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden transition-all duration-500 hover:border-violet-300 dark:hover:border-violet-500/20 hover:shadow-lg hover:shadow-violet-500/5 dark:hover:shadow-violet-500/10 hover:-translate-y-[2px]">
+      <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-amber-500 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-20 dark:group-hover:opacity-30" />
       {/* Header */}
       <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-white/[0.06]">
         <div className="flex items-center gap-3">

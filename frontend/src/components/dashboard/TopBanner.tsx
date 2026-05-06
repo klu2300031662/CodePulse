@@ -4,7 +4,7 @@ import { Sparkles, Rocket } from "lucide-react"
 
 export default function TopBanner() {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-violet-200 dark:border-white/[0.06] bg-gradient-to-r from-violet-50 via-blue-50 to-violet-50 dark:from-[#0f0f23] dark:via-[#1a1040] dark:to-[#0f0f23]">
+    <div className="relative overflow-hidden rounded-2xl border border-violet-200 dark:border-white/[0.06] bg-gradient-to-r from-violet-50 via-blue-50 to-violet-50 dark:from-[#0f0f23] dark:via-[#1a1040] dark:to-[#0f0f23] transition-all duration-500 hover:border-violet-300 dark:hover:border-violet-500/20 hover:shadow-lg hover:shadow-violet-500/5 dark:hover:shadow-violet-500/10 hover:-translate-y-[2px]">
       {/* Background effects */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-1/4 h-32 w-32 rounded-full bg-violet-300/20 dark:bg-violet-500/10 blur-3xl" />
