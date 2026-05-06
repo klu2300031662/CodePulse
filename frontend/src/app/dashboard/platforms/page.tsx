@@ -297,20 +297,26 @@ export default function PlatformsPage() {
                         <span className="font-bold text-2xl">{platform.totalSolved}</span>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-2 text-center pt-2">
-                        <div className="bg-green-50 dark:bg-green-950/30 rounded-lg py-2">
-                          <div className="text-[10px] text-green-600 dark:text-green-500 font-bold uppercase tracking-wider mb-1">Easy</div>
-                          <div className="font-semibold text-foreground">{platform.easySolved}</div>
+                      {platform.platformName === "CodeChef" ? (
+                        <div className="flex flex-col items-center justify-center py-4 text-center">
+                          <p className="text-xs text-muted-foreground">CodeChef does not provide public difficulty breakdowns</p>
                         </div>
-                        <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg py-2">
-                          <div className="text-[10px] text-yellow-600 dark:text-yellow-500 font-bold uppercase tracking-wider mb-1">Medium</div>
-                          <div className="font-semibold text-foreground">{platform.mediumSolved}</div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2 text-center pt-2">
+                          <div className="bg-green-50 dark:bg-green-950/30 rounded-lg py-2">
+                            <div className="text-[10px] text-green-600 dark:text-green-500 font-bold uppercase tracking-wider mb-1">Easy</div>
+                            <div className="font-semibold text-foreground">{platform.easySolved}</div>
+                          </div>
+                          <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg py-2">
+                            <div className="text-[10px] text-yellow-600 dark:text-yellow-500 font-bold uppercase tracking-wider mb-1">Medium</div>
+                            <div className="font-semibold text-foreground">{platform.mediumSolved}</div>
+                          </div>
+                          <div className="bg-red-50 dark:bg-red-950/30 rounded-lg py-2">
+                            <div className="text-[10px] text-red-600 dark:text-red-500 font-bold uppercase tracking-wider mb-1">Hard</div>
+                            <div className="font-semibold text-foreground">{platform.hardSolved}</div>
+                          </div>
                         </div>
-                        <div className="bg-red-50 dark:bg-red-950/30 rounded-lg py-2">
-                          <div className="text-[10px] text-red-600 dark:text-red-500 font-bold uppercase tracking-wider mb-1">Hard</div>
-                          <div className="font-semibold text-foreground">{platform.hardSolved}</div>
-                        </div>
-                      </div>
+                      )}
                     </>
                   )}
 

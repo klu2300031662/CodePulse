@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Trophy, ExternalLink, Clock, Loader2 } from "lucide-react"
+import { Trophy, ExternalLink, Clock, Loader2, Link2 } from "lucide-react"
 import { useAuthStore } from "@/lib/store/auth.store"
+import { useDashboardStore } from "@/lib/store/dashboard.store"
+import Link from "next/link"
 
 type Contest = {
   platform: string
@@ -50,9 +52,7 @@ function getCachedContests(): Contest[] {
     const raw = localStorage.getItem(CONTEST_CACHE_KEY);
     if (!raw) return [];
     const { data, ts } = JSON.parse(raw);
-    // Use cache if less than 30 minutes old
     if (Date.now() - ts < 30 * 60 * 1000 && data?.length > 0) return data;
-    // Even if stale, return it for instant render (will refresh in bg)
     return data || [];
   } catch { return []; }
 }
@@ -64,23 +64,21 @@ function setCachedContests(data: Contest[]) {
 }
 
 export default function ContestList() {
-  // Initialize from cache — no loading spinner needed if we have data
   const cached = typeof window !== "undefined" ? getCachedContests() : [];
-  const [contests, setContests] = useState<Contest[]>(cached)
+  const [allContests, setAllContests] = useState<Contest[]>(cached)
   const [loading, setLoading] = useState(cached.length === 0)
   const user = useAuthStore((state) => state.user) as any
+  const platforms = useDashboardStore((state) => state.platforms)
+
+  // Get linked platform names (normalized for matching)
+  const linkedPlatformNames = platforms.map((p: any) => p.platformName)
 
   useEffect(() => {
     if (user?.isGuest) {
-      setContests([
-        { platform: 'LeetCode', title: 'Weekly Contest 398', startTime: Math.floor((Date.now() + 2 * 86400000) / 1000), url: '#' },
-        { platform: 'Codeforces', title: 'Codeforces Round #950', startTime: Math.floor((Date.now() + 5 * 86400000) / 1000), url: '#' },
-        { platform: 'CodeChef', title: 'Starters 138', startTime: Math.floor((Date.now() + 7 * 86400000) / 1000), url: '#' },
-      ])
       setLoading(false)
       return
     }
-    // Fetch live contest data (silently if we already have cached data)
+    // Fetch live contest data
     fetch("/api/contests")
       .then((res) => res.json())
       .then((data) => {
@@ -90,17 +88,27 @@ export default function ContestList() {
           startTime: c.startTime,
           url: c.url,
         }))
-        setContests(mapped)
+        setAllContests(mapped)
         setCachedContests(mapped)
       })
       .catch((err) => console.error("Contest fetch error", err))
       .finally(() => setLoading(false))
   }, [user?.isGuest])
 
-  const upcomingContests = contests
+  // Filter contests to only linked platforms
+  const filteredContests = allContests.filter((c) => {
+    return linkedPlatformNames.some((name: string) =>
+      c.platform.toLowerCase().includes(name.toLowerCase()) ||
+      name.toLowerCase().includes(c.platform.toLowerCase())
+    )
+  })
+
+  const upcomingContests = filteredContests
     .filter((c) => c.startTime * 1000 > Date.now())
     .sort((a, b) => a.startTime - b.startTime)
     .slice(0, 6)
+
+  const noPlatformsLinked = linkedPlatformNames.length === 0
 
   return (
     <div className="group relative rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0f0f23]/80 backdrop-blur-xl overflow-hidden transition-all duration-500 hover:border-violet-300 dark:hover:border-violet-500/20 hover:shadow-lg hover:shadow-violet-500/5 dark:hover:shadow-violet-500/10 hover:-translate-y-[2px]">
@@ -114,13 +122,31 @@ export default function ContestList() {
           <h3 className="font-semibold text-zinc-900 dark:text-white text-sm">Upcoming Contests</h3>
         </div>
         <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
-          {upcomingContests.length} upcoming
+          {noPlatformsLinked ? "No platforms" : `${upcomingContests.length} upcoming`}
         </span>
       </div>
 
       {/* Content */}
       <div className="p-3 space-y-1.5 max-h-[420px] overflow-y-auto scrollbar-thin">
-        {loading ? (
+        {noPlatformsLinked ? (
+          /* No platforms linked — prompt user */
+          <div className="text-center py-10">
+            <div className="h-12 w-12 rounded-full bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center mx-auto mb-3">
+              <Link2 className="h-6 w-6 text-violet-500" />
+            </div>
+            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">No platforms linked</p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 max-w-[220px] mx-auto">
+              Link your coding platforms to see upcoming contests
+            </p>
+            <Link
+              href="/dashboard/platforms"
+              className="inline-flex items-center gap-1.5 mt-4 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              Link Platforms
+            </Link>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-5 w-5 text-zinc-400 dark:text-zinc-500 animate-spin" />
             <span className="ml-2 text-sm text-zinc-400 dark:text-zinc-500">Loading contests...</span>
@@ -166,7 +192,7 @@ export default function ContestList() {
           <div className="text-center py-12">
             <Trophy className="h-8 w-8 text-zinc-300 dark:text-zinc-700 mx-auto mb-3" />
             <p className="text-sm text-zinc-500">No upcoming contests</p>
-            <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">Check back later for new contests</p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">Your linked platforms have no scheduled contests</p>
           </div>
         )}
       </div>
