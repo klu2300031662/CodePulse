@@ -23,6 +23,7 @@ public class CodeExecutionService {
                 case "python" -> runPython(request.getCode(), request.getInput());
                 case "javascript", "js", "node" -> runJavaScript(request.getCode(), request.getInput());
                 case "java" -> runJava(request.getCode(), request.getInput());
+                case "c" -> runC(request.getCode(), request.getInput());
                 case "cpp", "c++" -> runCpp(request.getCode(), request.getInput());
                 default -> CodeExecutionResponse.builder()
                         .status("Error")
@@ -64,6 +65,24 @@ public class CodeExecutionService {
 
         // Run
         return executeProcess(new String[]{"java", "Main"}, file.getParentFile(), input, code);
+    }
+
+    private CodeExecutionResponse runC(String code, String input) throws Exception {
+        File sourceFile = createTempFile("main", ".c", code);
+        String exeName = System.getProperty("os.name").toLowerCase().contains("win") ? "main.exe" : "./main";
+
+        // Compile with gcc
+        ProcessBuilder pbCompile = new ProcessBuilder("gcc", sourceFile.getName(), "-o", "main");
+        pbCompile.directory(sourceFile.getParentFile());
+        Process compileProc = pbCompile.start();
+        boolean compiled = compileProc.waitFor(10, TimeUnit.SECONDS);
+
+        if (!compiled || compileProc.exitValue() != 0) {
+            String error = new String(compileProc.getErrorStream().readAllBytes());
+            return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\n" + error).build();
+        }
+
+        return executeProcess(new String[]{exeName}, sourceFile.getParentFile(), input, code);
     }
 
     private CodeExecutionResponse runCpp(String code, String input) throws Exception {
