@@ -79,7 +79,7 @@ export default function StatsCards({ prefetchedPlatforms }: StatsCardsProps) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <StatCard
         icon={<Hash className="h-6 w-6 text-white" />}
-        label="All Platforms Total"
+        label="All Platforms Total Problems"
         value={totalQuestions}
         gradient="from-blue-500 to-cyan-400"
         glowColor="bg-blue-500"
