@@ -53,5 +53,19 @@ export const PlatformService = {
       }
       throw new Error('An unexpected error occurred while removing the platform.');
     }
+  },
+
+  syncPlatform: async (id: number): Promise<PlatformLink> => {
+    try {
+      const response = await api.put(`/platforms/${id}/sync`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response) {
+        throw new Error(error.backendMessage || 'Sync failed. The platform API may be unavailable.');
+      } else if (error.request) {
+        throw new Error('Unable to reach the server. Please try again.');
+      }
+      throw new Error('An unexpected error occurred during sync.');
+    }
   }
 };

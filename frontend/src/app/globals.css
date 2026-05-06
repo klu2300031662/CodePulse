@@ -231,3 +231,13 @@ a[target="_blank"] {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(139, 92, 246, 0.3);
 }
+
+/* Loading shimmer for tab-switch indicator */
+@keyframes loadingShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.loading-shimmer {
+  animation: loadingShimmer 1.2s ease-in-out infinite;
+}

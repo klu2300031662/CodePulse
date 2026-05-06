@@ -20,17 +20,8 @@ export default function DashboardLoading() {
         </p>
       </div>
       <div className="w-32 h-0.5 rounded-full bg-zinc-200 dark:bg-white/[0.06] overflow-hidden">
-        <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-violet-500 to-blue-500 animate-shimmer" />
+        <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-violet-500 to-blue-500 loading-shimmer" />
       </div>
-      <style jsx>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(400%); }
-        }
-        .animate-shimmer {
-          animation: shimmer 1.2s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   )
 }
