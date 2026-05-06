@@ -17,45 +17,9 @@ interface StatCardProps {
 }
 
 function StatCard({ icon, label, value, gradient, glowColor, delay }: StatCardProps) {
-  const [animatedValue, setAnimatedValue] = useState(0)
-
-  useEffect(() => {
-    if (value <= 0) {
-      setAnimatedValue(0)
-      return
-    }
-
-    const delayMs = parseInt(delay) || 0
-    let rafId: number
-    let startTime: number | null = null
-    const duration = 1400 // ms
-
-    const timer = setTimeout(() => {
-      const animate = (timestamp: number) => {
-        if (!startTime) startTime = timestamp
-        const elapsed = timestamp - startTime
-        const progress = Math.min(elapsed / duration, 1)
-        // easeOutQuad for a natural deceleration
-        const eased = 1 - (1 - progress) * (1 - progress)
-        const current = Math.round(eased * value)
-        setAnimatedValue(current)
-        if (progress < 1) {
-          rafId = requestAnimationFrame(animate)
-        }
-      }
-      rafId = requestAnimationFrame(animate)
-    }, delayMs)
-
-    return () => {
-      clearTimeout(timer)
-      if (rafId) cancelAnimationFrame(rafId)
-    }
-  }, [value, delay])
-
   return (
     <div
       className="group relative overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0f0f23]/80 backdrop-blur-xl p-6 transition-all duration-500 hover:border-zinc-300 dark:hover:border-white/[0.12] hover:translate-y-[-2px] hover:shadow-lg dark:hover:shadow-none"
-      style={{ animationDelay: delay }}
     >
       {/* Glow effect */}
       <div
@@ -73,7 +37,7 @@ function StatCard({ icon, label, value, gradient, glowColor, delay }: StatCardPr
             {label}
           </p>
           <p className="text-3xl font-bold text-zinc-900 dark:text-white tabular-nums">
-            {animatedValue.toLocaleString()}
+            {value.toLocaleString()}
           </p>
         </div>
         <div
