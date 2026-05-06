@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
  * GET /api/platforms/stats?platform=LeetCode&username=xxx
  * Fetches real-time user stats from coding platform public APIs.
  * Supports: LeetCode, Codeforces, CodeChef, GeeksForGeeks
+ * Not supported (no public API): HackerRank, InterviewBit
  */
 
 export async function GET(request: NextRequest) {
@@ -28,12 +29,35 @@ export async function GET(request: NextRequest) {
         return await fetchCodeChef(username);
       case "geeksforgeeks":
         return await fetchGFG(username);
+      case "hackerrank":
+        return NextResponse.json({
+          totalSolved: 0,
+          easySolved: 0,
+          mediumSolved: 0,
+          hardSolved: 0,
+          platform: "HackerRank",
+          username,
+          notPublic: true,
+          message: "HackerRank does not provide a public API for user statistics. Your data cannot be synced automatically.",
+        });
+      case "interviewbit":
+        return NextResponse.json({
+          totalSolved: 0,
+          easySolved: 0,
+          mediumSolved: 0,
+          hardSolved: 0,
+          platform: "InterviewBit",
+          username,
+          notPublic: true,
+          message: "InterviewBit does not provide a public API for user statistics. Your data cannot be synced automatically.",
+        });
       default:
         return NextResponse.json({
           totalSolved: 0,
           easySolved: 0,
           mediumSolved: 0,
           hardSolved: 0,
+          notPublic: true,
           message: `Stats fetching not supported for ${platform} yet`,
         });
     }
@@ -91,7 +115,6 @@ async function fetchLeetCode(username: string) {
 
 // ── Codeforces ──
 async function fetchCodeforces(username: string) {
-  // Fetch user submissions to count unique solved problems
   const res = await fetch(
     `https://codeforces.com/api/user.status?handle=${encodeURIComponent(username)}&from=1&count=10000`
   );
@@ -133,50 +156,150 @@ async function fetchCodeforces(username: string) {
 
 // ── CodeChef ──
 async function fetchCodeChef(username: string) {
-  // Use CodeChef unofficial API
-  const res = await fetch(
-    `https://codechef-api.vercel.app/handle/${encodeURIComponent(username)}`
-  );
+  // Try the CodeChef user profile page to scrape "Total Problems Solved"
+  try {
+    const profileRes = await fetch(
+      `https://www.codechef.com/users/${encodeURIComponent(username)}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Accept": "text/html",
+        },
+      }
+    );
 
-  if (!res.ok) throw new Error("CodeChef API unavailable");
+    if (profileRes.ok) {
+      const html = await profileRes.text();
 
-  const data = await res.json();
+      // Extract "Total Problems Solved: XXX" from the page
+      const totalMatch = html.match(/Total Problems Solved:\s*(\d+)/i);
+      if (totalMatch) {
+        const totalSolved = parseInt(totalMatch[1], 10);
+        return NextResponse.json({
+          totalSolved,
+          easySolved: 0,
+          mediumSolved: 0,
+          hardSolved: 0,
+          platform: "CodeChef",
+          username,
+          note: "CodeChef does not provide difficulty breakdowns publicly",
+        });
+      }
 
-  if (!data || data.success === false) {
-    throw new Error(`User '${username}' not found on CodeChef`);
+      // Alternative: try finding the problem count from rating section
+      const solvedMatch = html.match(/class="rating-data-section problems-solved"[\s\S]*?(\d+)\s*<\/h5>/);
+      if (solvedMatch) {
+        return NextResponse.json({
+          totalSolved: parseInt(solvedMatch[1], 10),
+          easySolved: 0,
+          mediumSolved: 0,
+          hardSolved: 0,
+          platform: "CodeChef",
+          username,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("CodeChef scrape failed:", e);
   }
 
-  // CodeChef doesn't have easy/medium/hard — estimate from data
-  const totalSolved = data.currentRating ? Math.floor(data.currentRating / 10) : 0;
+  // Fallback: try community API
+  try {
+    const res = await fetch(
+      `https://codechef-api.vercel.app/handle/${encodeURIComponent(username)}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success !== false) {
+        return NextResponse.json({
+          totalSolved: data.fullySolved?.count || data.partiallySolved?.count || 0,
+          easySolved: 0,
+          mediumSolved: 0,
+          hardSolved: 0,
+          platform: "CodeChef",
+          username,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("CodeChef API fallback failed:", e);
+  }
 
-  return NextResponse.json({
-    totalSolved: data.fullySolved?.count || totalSolved,
-    easySolved: 0,
-    mediumSolved: 0,
-    hardSolved: 0,
-    platform: "CodeChef",
-    username,
-    note: "CodeChef does not provide difficulty breakdowns",
-  });
+  throw new Error("CodeChef API unavailable – could not fetch profile data");
 }
 
 // ── GeeksForGeeks ──
 async function fetchGFG(username: string) {
-  // GFG doesn't have an official API, use a community proxy
-  const res = await fetch(
-    `https://geeks-for-geeks-stats-api.vercel.app/?userName=${encodeURIComponent(username)}`
-  );
+  // Try the primary community API
+  try {
+    const res = await fetch(
+      `https://geeks-for-geeks-stats-api.vercel.app/?userName=${encodeURIComponent(username)}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.totalProblemsSolved) {
+        return NextResponse.json({
+          totalSolved: data.totalProblemsSolved || 0,
+          easySolved: parseInt(data.Easy || data.easy || "0", 10),
+          mediumSolved: parseInt(data.Medium || data.medium || "0", 10),
+          hardSolved: parseInt(data.Hard || data.hard || "0", 10),
+          platform: "GeeksForGeeks",
+          username,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("GFG primary API failed:", e);
+  }
 
-  if (!res.ok) throw new Error("GeeksForGeeks API unavailable");
+  // Fallback: try alternate API
+  try {
+    const res = await fetch(
+      `https://gfg-stats-api.vercel.app/api/${encodeURIComponent(username)}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json({
+        totalSolved: data.totalProblemsSolved || data.totalProblems || 0,
+        easySolved: data.easy || data.school || 0,
+        mediumSolved: data.medium || data.basic || 0,
+        hardSolved: data.hard || 0,
+        platform: "GeeksForGeeks",
+        username,
+      });
+    }
+  } catch (e) {
+    console.error("GFG fallback API failed:", e);
+  }
 
-  const data = await res.json();
+  // Last resort: scrape GFG profile
+  try {
+    const res = await fetch(
+      `https://www.geeksforgeeks.org/user/${encodeURIComponent(username)}/`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Accept": "text/html",
+        },
+      }
+    );
+    if (res.ok) {
+      const html = await res.text();
+      const totalMatch = html.match(/Problems Solved[\s\S]*?(\d+)/);
+      if (totalMatch) {
+        return NextResponse.json({
+          totalSolved: parseInt(totalMatch[1], 10),
+          easySolved: 0,
+          mediumSolved: 0,
+          hardSolved: 0,
+          platform: "GeeksForGeeks",
+          username,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("GFG scrape failed:", e);
+  }
 
-  return NextResponse.json({
-    totalSolved: data.totalProblemsSolved || 0,
-    easySolved: data.Easy || data.school || 0,
-    mediumSolved: data.Medium || data.basic || 0,
-    hardSolved: data.Hard || data.hard || 0,
-    platform: "GeeksForGeeks",
-    username,
-  });
+  throw new Error("GeeksForGeeks API unavailable");
 }

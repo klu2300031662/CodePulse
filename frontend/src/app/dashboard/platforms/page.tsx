@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
 import { useDashboardStore } from "@/lib/store/dashboard.store"
 import { useAuthStore } from "@/lib/store/auth.store"
-import { Link2, Unlink, RefreshCw, AlertCircle, Plus, CheckCircle2, XCircle, Clock, Loader2, AlertTriangle } from "lucide-react"
+import { Link2, Unlink, RefreshCw, AlertCircle, Plus, CheckCircle2, XCircle, Clock, Loader2, AlertTriangle, Lock, ShieldAlert } from "lucide-react"
+
+const NO_PUBLIC_API_PLATFORMS = ["HackerRank", "InterviewBit"]
 
 const SUPPORTED_PLATFORMS = ["LeetCode", "CodeChef", "HackerRank", "Codeforces", "InterviewBit", "GeeksForGeeks"]
 
@@ -269,25 +271,48 @@ export default function PlatformsPage() {
 
               <CardContent className="relative pt-6 flex-1">
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center pb-4 border-b border-zinc-100 dark:border-zinc-800/50">
-                    <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Solved</span>
-                    <span className="font-bold text-2xl">{platform.totalSolved}</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2 text-center pt-2">
-                    <div className="bg-green-50 dark:bg-green-950/30 rounded-lg py-2">
-                      <div className="text-[10px] text-green-600 dark:text-green-500 font-bold uppercase tracking-wider mb-1">Easy</div>
-                      <div className="font-semibold text-foreground">{platform.easySolved}</div>
+                  {NO_PUBLIC_API_PLATFORMS.includes(platform.platformName) ? (
+                    /* Not publicly accessible — show message */
+                    <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
+                      <div className="h-12 w-12 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+                        <ShieldAlert className="h-6 w-6 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">Not publicly accessible</p>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">
+                          {platform.platformName} does not provide a public API. Stats cannot be synced automatically.
+                        </p>
+                      </div>
+                      {platform.totalSolved > 0 && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-zinc-50 dark:bg-zinc-800/50 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">
+                          <Lock className="h-3 w-3" /> Last known: {platform.totalSolved} solved
+                        </div>
+                      )}
                     </div>
-                    <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg py-2">
-                      <div className="text-[10px] text-yellow-600 dark:text-yellow-500 font-bold uppercase tracking-wider mb-1">Medium</div>
-                      <div className="font-semibold text-foreground">{platform.mediumSolved}</div>
-                    </div>
-                    <div className="bg-red-50 dark:bg-red-950/30 rounded-lg py-2">
-                      <div className="text-[10px] text-red-600 dark:text-red-500 font-bold uppercase tracking-wider mb-1">Hard</div>
-                      <div className="font-semibold text-foreground">{platform.hardSolved}</div>
-                    </div>
-                  </div>
+                  ) : (
+                    /* Normal platform — show stats */
+                    <>
+                      <div className="flex justify-between items-center pb-4 border-b border-zinc-100 dark:border-zinc-800/50">
+                        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Solved</span>
+                        <span className="font-bold text-2xl">{platform.totalSolved}</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-2 text-center pt-2">
+                        <div className="bg-green-50 dark:bg-green-950/30 rounded-lg py-2">
+                          <div className="text-[10px] text-green-600 dark:text-green-500 font-bold uppercase tracking-wider mb-1">Easy</div>
+                          <div className="font-semibold text-foreground">{platform.easySolved}</div>
+                        </div>
+                        <div className="bg-yellow-50 dark:bg-yellow-950/30 rounded-lg py-2">
+                          <div className="text-[10px] text-yellow-600 dark:text-yellow-500 font-bold uppercase tracking-wider mb-1">Medium</div>
+                          <div className="font-semibold text-foreground">{platform.mediumSolved}</div>
+                        </div>
+                        <div className="bg-red-50 dark:bg-red-950/30 rounded-lg py-2">
+                          <div className="text-[10px] text-red-600 dark:text-red-500 font-bold uppercase tracking-wider mb-1">Hard</div>
+                          <div className="font-semibold text-foreground">{platform.hardSolved}</div>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {/* Sync error message */}
                   {syncError && (
