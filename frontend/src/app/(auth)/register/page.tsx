@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { AuthService } from '@/lib/api/auth.service';
 import { useAuthStore } from '@/lib/store/auth.store';
-import { Eye, EyeOff, Code2 } from 'lucide-react';
+import { Eye, EyeOff, Code2, Check, X } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import CaptchaBox, { type CaptchaHandle } from '@/components/CaptchaBox';
 
@@ -24,12 +24,25 @@ export default function RegisterPage() {
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const captchaRef = useRef<CaptchaHandle>(null);
 
+  const passwordChecks = {
+    length: formData.password.length >= 6,
+    letter: /[a-zA-Z]/.test(formData.password),
+    number: /[0-9]/.test(formData.password),
+    special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(formData.password),
+  };
+  const allPasswordChecksPassed = Object.values(passwordChecks).every(Boolean);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (!formData.email.toLowerCase().endsWith('@gmail.com')) {
       setError('Only Gmail addresses (@gmail.com) are allowed for registration.');
+      return;
+    }
+
+    if (!allPasswordChecksPassed) {
+      setError('Password must be at least 6 characters and contain a letter, a number, and a special character.');
       return;
     }
 
@@ -154,6 +167,7 @@ export default function RegisterPage() {
                     id="reg-password"
                     name="reg-password"
                     type={showPassword ? "text" : "password"}
+                    placeholder="Min 6 chars, letter, number & special"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
@@ -169,6 +183,28 @@ export default function RegisterPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {/* Password strength checklist */}
+                {formData.password.length > 0 && (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1.5 px-1">
+                    {[
+                      { key: 'length' as const, label: 'At least 6 characters' },
+                      { key: 'letter' as const, label: 'Contains a letter' },
+                      { key: 'number' as const, label: 'Contains a number' },
+                      { key: 'special' as const, label: 'Special character' },
+                    ].map(({ key, label }) => (
+                      <div key={key} className="flex items-center gap-1.5 text-xs">
+                        {passwordChecks[key] ? (
+                          <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+                        ) : (
+                          <X className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                        )}
+                        <span className={passwordChecks[key] ? 'text-emerald-500' : 'text-muted-foreground/70'}>
+                          {label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="reg-confirm-password">Confirm Password</Label>

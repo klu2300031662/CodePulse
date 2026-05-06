@@ -193,6 +193,15 @@ public class AuthController {
       return ResponseEntity.badRequest().body(new MessageResponse("Error: Token and new password are required!"));
     }
 
+    // Validate password complexity
+    if (newPassword.length() < 6
+        || !newPassword.matches(".*[a-zA-Z].*")
+        || !newPassword.matches(".*\\d.*")
+        || !newPassword.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?`~].*")) {
+      return ResponseEntity.badRequest().body(new MessageResponse(
+          "Error: Password must be at least 6 characters and contain a letter, a number, and a special character."));
+    }
+
     java.util.Optional<User> userOptional = userRepository.findByResetPasswordToken(token);
     if (!userOptional.isPresent()) {
       return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid or expired reset token!"));

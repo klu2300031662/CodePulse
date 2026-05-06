@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Eye, EyeOff, CheckCircle2, Code2, ShieldCheck, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, Code2, ShieldCheck, XCircle, AlertTriangle, Loader2, Check, X } from 'lucide-react';
 import { AuthService } from '@/lib/api/auth.service';
 
 type PageState = 'loading' | 'valid' | 'expired' | 'success';
@@ -46,11 +46,24 @@ function ResetPasswordForm() {
     validateToken();
   }, [token]);
 
+  const passwordChecks = {
+    length: formData.newPassword.length >= 6,
+    letter: /[a-zA-Z]/.test(formData.newPassword),
+    number: /[0-9]/.test(formData.newPassword),
+    special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(formData.newPassword),
+  };
+  const allPasswordChecksPassed = Object.values(passwordChecks).every(Boolean);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
 
     setError('');
+
+    if (!allPasswordChecksPassed) {
+      setError('Password must be at least 6 characters and contain a letter, a number, and a special character.');
+      return;
+    }
 
     if (formData.newPassword !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -172,7 +185,7 @@ function ResetPasswordForm() {
               <Input
                 id="newPassword"
                 type={showPassword ? "text" : "password"}
-                placeholder="Min 6 characters"
+                placeholder="Min 6 chars, letter, number & special"
                 value={formData.newPassword}
                 onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
                 required
@@ -188,6 +201,28 @@ function ResetPasswordForm() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            {/* Password strength checklist */}
+            {formData.newPassword.length > 0 && (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1.5 px-1">
+                {[
+                  { key: 'length' as const, label: 'At least 6 characters' },
+                  { key: 'letter' as const, label: 'Contains a letter' },
+                  { key: 'number' as const, label: 'Contains a number' },
+                  { key: 'special' as const, label: 'Special character' },
+                ].map(({ key, label }) => (
+                  <div key={key} className="flex items-center gap-1.5 text-xs">
+                    {passwordChecks[key] ? (
+                      <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+                    ) : (
+                      <X className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                    )}
+                    <span className={passwordChecks[key] ? 'text-emerald-500' : 'text-muted-foreground/70'}>
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="space-y-2">
