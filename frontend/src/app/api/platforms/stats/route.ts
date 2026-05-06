@@ -217,10 +217,54 @@ async function fetchCodeChef(username: string) {
 }
 
 // ════════════════════════════════════════════
-// ── GeeksForGeeks (Community APIs) ──
+// ── GeeksForGeeks (Profile scraping + API fallback) ──
 // ════════════════════════════════════════════
 async function fetchGFG(username: string) {
-  // Approach 1: Primary community API
+  // Approach 1: Scrape GFG profile page — data is embedded in SSR HTML
+  try {
+    const res = await fetchWithTimeout(
+      `https://www.geeksforgeeks.org/user/${encodeURIComponent(username)}/`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml",
+        },
+        redirect: "follow",
+      },
+      12000
+    );
+
+    if (res.ok) {
+      const html = await res.text();
+
+      // Extract totalProblemsSolved from embedded JSON
+      const totalMatch = html.match(/"totalProblemsSolved"\s*:\s*"?(\d+)"?/);
+      const altMatch = html.match(/"problemsSolved"\s*:\s*"?(\d+)"?/);
+      const total = totalMatch ? parseInt(totalMatch[1], 10) : (altMatch ? parseInt(altMatch[1], 10) : 0);
+
+      if (total > 0) {
+        // Extract difficulty breakdown
+        const easyMatch = html.match(/"EASY"\s*:\s*"?(\d+)"?/i);
+        const medMatch = html.match(/"MEDIUM"\s*:\s*"?(\d+)"?/i);
+        const hardMatch = html.match(/"HARD"\s*:\s*"?(\d+)"?/i);
+        const basicMatch = html.match(/"BASIC"\s*:\s*"?(\d+)"?/i);
+        const schoolMatch = html.match(/"SCHOOL"\s*:\s*"?(\d+)"?/i);
+
+        const easy = (easyMatch ? parseInt(easyMatch[1], 10) : 0)
+                   + (basicMatch ? parseInt(basicMatch[1], 10) : 0)
+                   + (schoolMatch ? parseInt(schoolMatch[1], 10) : 0);
+        const medium = medMatch ? parseInt(medMatch[1], 10) : 0;
+        const hard = hardMatch ? parseInt(hardMatch[1], 10) : 0;
+
+        return NextResponse.json({
+          totalSolved: total, easySolved: easy, mediumSolved: medium, hardSolved: hard,
+          platform: "GeeksForGeeks", username,
+        });
+      }
+    }
+  } catch (e) { console.error("GFG scrape failed:", e); }
+
+  // Approach 2: Community API
   try {
     const res = await fetchWithTimeout(
       `https://geeks-for-geeks-stats-api.vercel.app/?userName=${encodeURIComponent(username)}`
@@ -237,16 +281,16 @@ async function fetchGFG(username: string) {
         });
       }
     }
-  } catch (e) { console.error("GFG API 1 failed:", e); }
+  } catch (e) { console.error("GFG community API failed:", e); }
 
-  // Approach 2: gfgstatsapi
+  // Approach 3: Alternative community API
   try {
     const res = await fetchWithTimeout(
       `https://gfgstatsapi.onrender.com/api/${encodeURIComponent(username)}`
     );
     if (res.ok) {
       const data = await res.json();
-      if (data) {
+      if (data && data.totalProblemsSolved) {
         return NextResponse.json({
           totalSolved: data.totalProblemsSolved || 0,
           easySolved: data.Easy || data.easy || 0,
@@ -257,23 +301,6 @@ async function fetchGFG(username: string) {
       }
     }
   } catch (e) { console.error("GFG API 2 failed:", e); }
-
-  // Approach 3: Another GFG stats API
-  try {
-    const res = await fetchWithTimeout(
-      `https://gfg-stats-api.vercel.app/api/${encodeURIComponent(username)}`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json({
-        totalSolved: data.totalProblemsSolved || data.totalProblems || 0,
-        easySolved: data.easy || 0,
-        mediumSolved: data.medium || 0,
-        hardSolved: data.hard || 0,
-        platform: "GeeksForGeeks", username,
-      });
-    }
-  } catch (e) { console.error("GFG API 3 failed:", e); }
 
   throw new Error("GeeksForGeeks API unavailable");
 }

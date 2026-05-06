@@ -244,11 +244,86 @@ public class PlatformStatsService {
         return stats;
     }
 
-    // ── GeeksForGeeks (Community APIs) ──
+    // ── GeeksForGeeks (Profile page scraping + Community API fallback) ──
     private PlatformStats fetchGFG(String username) {
         PlatformStats stats = new PlatformStats();
 
-        // Approach 1: Primary community API
+        // Approach 1: Scrape the GFG profile page directly
+        // The page embeds user data in JSON within the HTML
+        try {
+            // GFG profile URLs: https://www.geeksforgeeks.org/user/{handle}/
+            HttpClient scrapeClient = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .followRedirects(HttpClient.Redirect.ALWAYS)
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://www.geeksforgeeks.org/user/" + username + "/"))
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                    .header("Accept-Language", "en-US,en;q=0.5")
+                    .timeout(Duration.ofSeconds(12))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = scrapeClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                String body = response.body();
+
+                // Pattern 1: Look for "totalProblemsSolved":"195" or totalProblemsSolved":195
+                java.util.regex.Matcher m1 = java.util.regex.Pattern
+                        .compile("\"totalProblemsSolved\"\\s*:\\s*\"?(\\d+)\"?")
+                        .matcher(body);
+                if (m1.find()) {
+                    stats.totalSolved = Integer.parseInt(m1.group(1));
+                    logger.info("GFG scrape: Found totalProblemsSolved={} for '{}'", stats.totalSolved, username);
+                    
+                    // Try to extract difficulty breakdown
+                    extractGFGDifficulty(body, stats);
+                    return stats;
+                }
+
+                // Pattern 2: Look for "problemsSolved":"195" in embedded JSON
+                java.util.regex.Matcher m2 = java.util.regex.Pattern
+                        .compile("\"problemsSolved\"\\s*:\\s*\"?(\\d+)\"?")
+                        .matcher(body);
+                if (m2.find()) {
+                    stats.totalSolved = Integer.parseInt(m2.group(1));
+                    logger.info("GFG scrape: Found problemsSolved={} for '{}'", stats.totalSolved, username);
+                    extractGFGDifficulty(body, stats);
+                    return stats;
+                }
+
+                // Pattern 3: Look for the score card pattern "solvedProblems":195
+                java.util.regex.Matcher m3 = java.util.regex.Pattern
+                        .compile("solvedProblems[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)")
+                        .matcher(body);
+                if (m3.find()) {
+                    stats.totalSolved = Integer.parseInt(m3.group(1));
+                    extractGFGDifficulty(body, stats);
+                    return stats;
+                }
+
+                // Pattern 4: Look for "Total Problems Solved" text followed by a number
+                java.util.regex.Matcher m4 = java.util.regex.Pattern
+                        .compile("(?:Total\\s+Problems?\\s+Solved|Problems?\\s+Solved)\\D*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                        .matcher(body);
+                if (m4.find()) {
+                    stats.totalSolved = Integer.parseInt(m4.group(1));
+                    extractGFGDifficulty(body, stats);
+                    return stats;
+                }
+                
+                logger.warn("GFG scrape: Could not find problem count in profile page for '{}'", username);
+            } else {
+                logger.warn("GFG scrape returned status {} for '{}'", response.statusCode(), username);
+            }
+        } catch (Exception e) {
+            logger.warn("GFG profile scrape failed for '{}': {}", username, e.getMessage());
+        }
+
+        // Approach 2: Community API (primary)
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://geeks-for-geeks-stats-api.vercel.app/?userName=" + username))
@@ -261,19 +336,15 @@ public class PlatformStatsService {
 
             if (response.statusCode() == 200) {
                 String body = response.body();
-                
-                // Extract totalProblemsSolved
                 String total = extractJsonString(body, "totalProblemsSolved");
                 if (total != null) {
                     stats.totalSolved = Integer.parseInt(total);
-                    
                     String easy = extractJsonString(body, "Easy");
                     if (easy == null) easy = extractJsonString(body, "easy");
                     String medium = extractJsonString(body, "Medium");
                     if (medium == null) medium = extractJsonString(body, "medium");
                     String hard = extractJsonString(body, "Hard");
                     if (hard == null) hard = extractJsonString(body, "hard");
-                    
                     stats.easySolved = parseIntSafe(easy);
                     stats.mediumSolved = parseIntSafe(medium);
                     stats.hardSolved = parseIntSafe(hard);
@@ -281,10 +352,10 @@ public class PlatformStatsService {
                 }
             }
         } catch (Exception e) {
-            logger.warn("GFG API 1 failed for '{}': {}", username, e.getMessage());
+            logger.warn("GFG community API failed for '{}': {}", username, e.getMessage());
         }
 
-        // Approach 2: Alternative API
+        // Approach 3: Alternative community API
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://gfgstatsapi.onrender.com/api/" + username))
@@ -312,6 +383,41 @@ public class PlatformStatsService {
 
         stats.error = "GeeksForGeeks API unavailable";
         return stats;
+    }
+
+    /** Extract GFG difficulty breakdown from page HTML */
+    private void extractGFGDifficulty(String body, PlatformStats stats) {
+        try {
+            // Look for patterns like "SCHOOL":"0","BASIC":"170","EASY":"18","MEDIUM":"7","HARD":"0"
+            // or "school":0,"basic":170,"easy":18,"medium":7,"hard":0
+            java.util.regex.Matcher em = java.util.regex.Pattern
+                    .compile("(?:\"EASY\"|\"easy\"|\"Easy\")\\s*[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                    .matcher(body);
+            if (em.find()) stats.easySolved = Integer.parseInt(em.group(1));
+
+            java.util.regex.Matcher mm = java.util.regex.Pattern
+                    .compile("(?:\"MEDIUM\"|\"medium\"|\"Medium\")\\s*[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                    .matcher(body);
+            if (mm.find()) stats.mediumSolved = Integer.parseInt(mm.group(1));
+
+            java.util.regex.Matcher hm = java.util.regex.Pattern
+                    .compile("(?:\"HARD\"|\"hard\"|\"Hard\")\\s*[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                    .matcher(body);
+            if (hm.find()) stats.hardSolved = Integer.parseInt(hm.group(1));
+
+            // Include BASIC + SCHOOL in easy count if found
+            java.util.regex.Matcher bm = java.util.regex.Pattern
+                    .compile("(?:\"BASIC\"|\"basic\"|\"Basic\")\\s*[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                    .matcher(body);
+            if (bm.find()) stats.easySolved += Integer.parseInt(bm.group(1));
+
+            java.util.regex.Matcher sm = java.util.regex.Pattern
+                    .compile("(?:\"SCHOOL\"|\"school\"|\"School\")\\s*[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                    .matcher(body);
+            if (sm.find()) stats.easySolved += Integer.parseInt(sm.group(1));
+        } catch (Exception e) {
+            logger.warn("Could not extract GFG difficulty breakdown: {}", e.getMessage());
+        }
     }
 
     // ── Utility methods ──
