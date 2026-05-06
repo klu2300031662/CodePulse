@@ -43,9 +43,31 @@ function getTimeRemaining(startTime: number): string {
   return `${minutes}m`
 }
 
+const CONTEST_CACHE_KEY = "codepulse_contests_cache";
+
+function getCachedContests(): Contest[] {
+  try {
+    const raw = localStorage.getItem(CONTEST_CACHE_KEY);
+    if (!raw) return [];
+    const { data, ts } = JSON.parse(raw);
+    // Use cache if less than 30 minutes old
+    if (Date.now() - ts < 30 * 60 * 1000 && data?.length > 0) return data;
+    // Even if stale, return it for instant render (will refresh in bg)
+    return data || [];
+  } catch { return []; }
+}
+
+function setCachedContests(data: Contest[]) {
+  try {
+    localStorage.setItem(CONTEST_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+  } catch {}
+}
+
 export default function ContestList() {
-  const [contests, setContests] = useState<Contest[]>([])
-  const [loading, setLoading] = useState(true)
+  // Initialize from cache — no loading spinner needed if we have data
+  const cached = typeof window !== "undefined" ? getCachedContests() : [];
+  const [contests, setContests] = useState<Contest[]>(cached)
+  const [loading, setLoading] = useState(cached.length === 0)
   const user = useAuthStore((state) => state.user) as any
 
   useEffect(() => {
@@ -58,7 +80,7 @@ export default function ContestList() {
       setLoading(false)
       return
     }
-    // Fetch live contest data from our proxy API
+    // Fetch live contest data (silently if we already have cached data)
     fetch("/api/contests")
       .then((res) => res.json())
       .then((data) => {
@@ -69,6 +91,7 @@ export default function ContestList() {
           url: c.url,
         }))
         setContests(mapped)
+        setCachedContests(mapped)
       })
       .catch((err) => console.error("Contest fetch error", err))
       .finally(() => setLoading(false))

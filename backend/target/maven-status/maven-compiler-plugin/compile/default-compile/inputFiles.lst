@@ -28,6 +28,8 @@ C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backe
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\security\jwt\AuthTokenFilter.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\security\jwt\JwtUtils.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\security\services\CodeExecutionService.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\security\services\EmailService.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\security\services\UserDetailsImpl.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\security\services\UserDetailsServiceImpl.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\security\WebSecurityConfig.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\service\PlatformStatsService.java

@@ -9,6 +9,7 @@ import com.codepulse.backend.models.User;
 import com.codepulse.backend.repository.PlatformLinkRepository;
 import com.codepulse.backend.repository.UserRepository;
 import com.codepulse.backend.security.services.UserDetailsImpl;
+import com.codepulse.backend.service.PlatformStatsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ public class PlatformLinkController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PlatformStatsService platformStatsService;
+
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -48,66 +52,26 @@ public class PlatformLinkController {
                 .orElseThrow(() -> new UnauthorizedException("User account not found. Please log in again."));
     }
 
+    // ── GET /api/platforms — List all linked platforms with live sync ──
     @GetMapping
     public ResponseEntity<?> getUserPlatforms() {
         User user = getCurrentUser();
-
         List<PlatformLink> links = platformLinkRepository.findByUser(user);
-        
-        // Sync LeetCode data to update to current date solved problems
+
+        // Auto-sync all platforms that haven't been synced in 5+ minutes
         for (PlatformLink link : links) {
-            if ("LeetCode".equalsIgnoreCase(link.getPlatformName())) {
-                try {
-                    String query = "{\"query\":\"query getUserProfile($username: String!) { matchedUser(username: $username) { submitStats { acSubmissionNum { difficulty count } } } }\",\"variables\":{\"username\":\"" + link.getUsername() + "\"}}";
-                    
-                    java.net.URI uri = java.net.URI.create("https://leetcode.com/graphql");
-                    java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-                    java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                            .uri(uri)
-                            .header("Content-Type", "application/json")
-                            .header("User-Agent", "Mozilla/5.0")
-                            .POST(java.net.http.HttpRequest.BodyPublishers.ofString(query))
-                            .build();
-                            
-                    java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
-                    
-                    if (response.statusCode() == 200) {
-                        String body = response.body();
-                        if (body.contains("\"acSubmissionNum\"")) {
-                            int total = 0, easy = 0, medium = 0, hard = 0;
-                            try {
-                                String[] parts = body.split("\"difficulty\":\"All\",\"count\":");
-                                if(parts.length > 1) total = Integer.parseInt(parts[1].split("}")[0]);
-                                
-                                parts = body.split("\"difficulty\":\"Easy\",\"count\":");
-                                if(parts.length > 1) easy = Integer.parseInt(parts[1].split("}")[0]);
-                                
-                                parts = body.split("\"difficulty\":\"Medium\",\"count\":");
-                                if(parts.length > 1) medium = Integer.parseInt(parts[1].split("}")[0]);
-                                
-                                parts = body.split("\"difficulty\":\"Hard\",\"count\":");
-                                if(parts.length > 1) hard = Integer.parseInt(parts[1].split("}")[0]);
-                                
-                                link.setTotalSolved(total);
-                                link.setEasySolved(easy);
-                                link.setMediumSolved(medium);
-                                link.setHardSolved(hard);
-                                link.setLastSyncedAt(LocalDateTime.now());
-                                platformLinkRepository.save(link);
-                            } catch (Exception e) {
-                                logger.warn("Failed to parse LeetCode stats for user '{}': {}", link.getUsername(), e.getMessage());
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.warn("Failed to sync LeetCode data for user '{}': {}", link.getUsername(), e.getMessage());
-                }
+            boolean shouldSync = link.getLastSyncedAt() == null ||
+                    link.getLastSyncedAt().isBefore(LocalDateTime.now().minusMinutes(5));
+
+            if (shouldSync) {
+                syncPlatformData(link);
             }
         }
-        
+
         return ResponseEntity.ok(links);
     }
 
+    // ── POST /api/platforms — Link a new platform ──
     @PostMapping
     public ResponseEntity<?> linkPlatform(@RequestBody PlatformLinkPayload payload) {
         User user = getCurrentUser();
@@ -119,74 +83,63 @@ public class PlatformLinkController {
         }
 
         PlatformLink link = new PlatformLink(user, payload.getPlatformName(), payload.getUsername(), payload.getProfileUrl());
-        
         link.setSynced(true);
         link.setLastSyncedAt(LocalDateTime.now());
 
-        if ("LeetCode".equalsIgnoreCase(payload.getPlatformName())) {
-            try {
-                String query = "{\"query\":\"query getUserProfile($username: String!) { matchedUser(username: $username) { submitStats { acSubmissionNum { difficulty count } } } }\",\"variables\":{\"username\":\"" + payload.getUsername() + "\"}}";
-                
-                java.net.URI uri = java.net.URI.create("https://leetcode.com/graphql");
-                java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                        .uri(uri)
-                        .header("Content-Type", "application/json")
-                        .header("User-Agent", "Mozilla/5.0")
-                        .POST(java.net.http.HttpRequest.BodyPublishers.ofString(query))
-                        .build();
-                        
-                java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
-                
-                if (response.statusCode() == 200) {
-                    String body = response.body();
-                    if (body.contains("\"matchedUser\":null")) {
-                        throw new BadRequestException("LeetCode username '" + payload.getUsername() + "' not found. Please check and try again.");
-                    }
-                    if (body.contains("\"acSubmissionNum\"")) {
-                        int total = 0, easy = 0, medium = 0, hard = 0;
-                        try {
-                            String[] parts = body.split("\"difficulty\":\"All\",\"count\":");
-                            if(parts.length > 1) total = Integer.parseInt(parts[1].split("}")[0]);
-                            
-                            parts = body.split("\"difficulty\":\"Easy\",\"count\":");
-                            if(parts.length > 1) easy = Integer.parseInt(parts[1].split("}")[0]);
-                            
-                            parts = body.split("\"difficulty\":\"Medium\",\"count\":");
-                            if(parts.length > 1) medium = Integer.parseInt(parts[1].split("}")[0]);
-                            
-                            parts = body.split("\"difficulty\":\"Hard\",\"count\":");
-                            if(parts.length > 1) hard = Integer.parseInt(parts[1].split("}")[0]);
-                        } catch (Exception e) {
-                            logger.warn("Failed to parse LeetCode stats for user '{}': {}", payload.getUsername(), e.getMessage());
-                        }
-                        
-                        link.setTotalSolved(total);
-                        link.setEasySolved(easy);
-                        link.setMediumSolved(medium);
-                        link.setHardSolved(hard);
-                    } else {
-                        throw new BadRequestException("Could not fetch LeetCode data. The API may be temporarily unavailable.");
-                    }
-                }
-            } catch (BadRequestException e) {
-                throw e; // Re-throw our custom exception
-            } catch (Exception e) {
-                logger.error("Error fetching LeetCode data for '{}': {}", payload.getUsername(), e.getMessage());
-                throw new BadRequestException("Could not connect to LeetCode. Please check the username and try again.");
+        // Fetch real stats from the platform
+        PlatformStatsService.PlatformStats stats = platformStatsService.fetchStats(
+                payload.getPlatformName(), payload.getUsername()
+        );
+
+        if (stats.error != null && "LeetCode".equalsIgnoreCase(payload.getPlatformName())) {
+            // Only block linking if LeetCode username is definitely invalid
+            if (stats.error.contains("not found")) {
+                throw new BadRequestException("LeetCode username '" + payload.getUsername() + "' not found. Please check and try again.");
             }
+        }
+
+        if (stats.notPublic) {
+            // HackerRank/InterviewBit — set zeros, mark as synced
+            link.setTotalSolved(0);
+            link.setEasySolved(0);
+            link.setMediumSolved(0);
+            link.setHardSolved(0);
+        } else if (stats.error == null) {
+            // Successfully fetched real stats
+            link.setTotalSolved(stats.totalSolved);
+            link.setEasySolved(stats.easySolved);
+            link.setMediumSolved(stats.mediumSolved);
+            link.setHardSolved(stats.hardSolved);
         } else {
-            // Mock syncing data for MVP for other platforms
-            link.setTotalSolved((int) (Math.random() * 200) + 50);
-            link.setEasySolved((int) (link.getTotalSolved() * 0.5));
-            link.setMediumSolved((int) (link.getTotalSolved() * 0.3));
-            link.setHardSolved(link.getTotalSolved() - link.getEasySolved() - link.getMediumSolved());
+            // API failed — set to 0 initially, user can sync later
+            logger.warn("Could not fetch stats for {} user '{}': {}", payload.getPlatformName(), payload.getUsername(), stats.error);
+            link.setTotalSolved(0);
+            link.setEasySolved(0);
+            link.setMediumSolved(0);
+            link.setHardSolved(0);
         }
 
         platformLinkRepository.save(link);
         return ResponseEntity.ok(link);
     }
 
+    // ── PUT /api/platforms/{id}/sync — Manual sync for a single platform ──
+    @PutMapping("/{id}/sync")
+    public ResponseEntity<?> syncPlatform(@PathVariable Long id) {
+        User user = getCurrentUser();
+
+        PlatformLink link = platformLinkRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Platform link", "id", id));
+
+        if (!link.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("You do not have permission to sync this platform.");
+        }
+
+        syncPlatformData(link);
+        return ResponseEntity.ok(link);
+    }
+
+    // ── DELETE /api/platforms/{id} — Remove a platform ──
     @DeleteMapping("/{id}")
     public ResponseEntity<?> removePlatform(@PathVariable Long id) {
         User user = getCurrentUser();
@@ -200,6 +153,42 @@ public class PlatformLinkController {
 
         platformLinkRepository.deleteById(id);
         return ResponseEntity.ok("Platform link removed successfully");
+    }
+
+    // ── Internal: Sync stats from platform API and persist to DB ──
+    private void syncPlatformData(PlatformLink link) {
+        try {
+            PlatformStatsService.PlatformStats stats = platformStatsService.fetchStats(
+                    link.getPlatformName(), link.getUsername()
+            );
+
+            if (stats.notPublic) {
+                // HackerRank/InterviewBit — just update sync timestamp
+                link.setLastSyncedAt(LocalDateTime.now());
+                link.setSynced(true);
+                platformLinkRepository.save(link);
+                return;
+            }
+
+            if (stats.error == null) {
+                link.setTotalSolved(stats.totalSolved);
+                link.setEasySolved(stats.easySolved);
+                link.setMediumSolved(stats.mediumSolved);
+                link.setHardSolved(stats.hardSolved);
+                link.setLastSyncedAt(LocalDateTime.now());
+                link.setSynced(true);
+                platformLinkRepository.save(link);
+                logger.info("Synced {} for '{}': {} total solved",
+                        link.getPlatformName(), link.getUsername(), stats.totalSolved);
+            } else {
+                logger.warn("Sync failed for {} user '{}': {}",
+                        link.getPlatformName(), link.getUsername(), stats.error);
+                // Don't update stats if sync failed — keep old values
+            }
+        } catch (Exception e) {
+            logger.error("Error syncing {} for '{}': {}",
+                    link.getPlatformName(), link.getUsername(), e.getMessage());
+        }
     }
 }
 
