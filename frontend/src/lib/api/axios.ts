@@ -72,7 +72,7 @@ api.interceptors.response.use(
         if (!isAuthPage && !isAuthRequest && !isGuestUser()) {
           localStorage.removeItem('user');
           localStorage.removeItem('auth-storage');
-          window.location.href = '/login?session=expired';
+          window.location.href = '/';
         }
       }
 

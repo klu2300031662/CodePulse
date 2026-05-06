@@ -26,17 +26,17 @@ interface PrepCard {
 
 const prepCards: PrepCard[] = [
   {
-    title: "Flipkart Interview Sheet",
-    shortTitle: "Flipkart",
-    description: "Curated Flipkart interview questions and preparation material",
+    title: "IndiaBix Aptitude & Reasoning",
+    shortTitle: "IndiaBix",
+    description: "Practice aptitude, logical reasoning & verbal ability for placements",
     longDescription:
-      "Access a comprehensive collection of interview questions frequently asked at Flipkart. This sheet covers DSA, system design, and behavioral rounds — everything you need to crack the Flipkart interview.",
-    url: "https://www.foundit.in/career-advice/flipkart-interview-questions/",
+      "IndiaBix is the go-to platform for practicing quantitative aptitude, logical reasoning, verbal ability, and programming MCQs. Widely used by students preparing for campus placements, competitive exams, and technical interviews.",
+    url: "https://www.indiabix.com/",
     icon: <BookOpen className="h-6 w-6" />,
     gradient: "from-blue-500 via-blue-600 to-indigo-600",
     glowColor: "bg-blue-500",
     borderGlow: "group-hover:shadow-blue-500/10 dark:group-hover:shadow-blue-500/20",
-    tag: "Interview",
+    tag: "Aptitude",
   },
   {
     title: "Striver A2Z DSA Sheet",
