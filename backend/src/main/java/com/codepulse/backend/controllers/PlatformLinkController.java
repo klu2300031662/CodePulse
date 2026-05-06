@@ -9,6 +9,7 @@ import com.codepulse.backend.models.User;
 import com.codepulse.backend.repository.PlatformLinkRepository;
 import com.codepulse.backend.repository.UserRepository;
 import com.codepulse.backend.security.services.UserDetailsImpl;
+import com.codepulse.backend.service.PlatformAnalyticsService;
 import com.codepulse.backend.service.PlatformStatsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -37,6 +39,9 @@ public class PlatformLinkController {
 
     @Autowired
     private PlatformStatsService platformStatsService;
+
+    @Autowired
+    private PlatformAnalyticsService platformAnalyticsService;
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -137,6 +142,25 @@ public class PlatformLinkController {
 
         syncPlatformData(link);
         return ResponseEntity.ok(link);
+    }
+
+    // ── GET /api/platforms/{id}/analytics — Detailed platform analytics ──
+    @GetMapping("/{id}/analytics")
+    public ResponseEntity<?> getPlatformAnalytics(@PathVariable Long id) {
+        User user = getCurrentUser();
+
+        PlatformLink link = platformLinkRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Platform link", "id", id));
+
+        if (!link.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("You do not have permission to view this platform's analytics.");
+        }
+
+        Map<String, Object> analytics = platformAnalyticsService.getAnalytics(
+                link.getPlatformName(), link.getUsername()
+        );
+
+        return ResponseEntity.ok(analytics);
     }
 
     // ── DELETE /api/platforms/{id} — Remove a platform ──
