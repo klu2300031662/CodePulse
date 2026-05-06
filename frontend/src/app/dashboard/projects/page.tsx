@@ -50,7 +50,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in-up">
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Project Portfolio</h2>

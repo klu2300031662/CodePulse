@@ -70,7 +70,7 @@ export default function PlatformsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Connected Platforms</h2>

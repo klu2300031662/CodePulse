@@ -74,7 +74,7 @@ export default function LeaderboardPage() {
   }, [user?.isGuest, fetchPlatforms])
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto animate-fade-in-up">
       <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
         <div className="p-4 bg-primary/10 rounded-full">
           <Globe className="h-12 w-12 text-primary" />

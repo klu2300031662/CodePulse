@@ -42,7 +42,7 @@ const COMPANIES = [
 
 export default function CompanyPrepPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Company Preparation</h2>
         <p className="text-muted-foreground">Track your progress against top tech company specific problem sets.</p>

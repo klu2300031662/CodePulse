@@ -149,4 +149,85 @@
       transform: translateX(0);
     }
   }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.35s ease-out forwards;
+  }
+}
+
+/* ── Global Interactive Hover Highlights ── */
+
+/* Cards: subtle lift + border glow on hover */
+.dark [class*="rounded-2xl"][class*="border"],
+.dark [class*="rounded-xl"][class*="border"] {
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.dark [class*="rounded-2xl"][class*="border"]:hover,
+.dark [class*="rounded-xl"][class*="border"]:hover {
+  border-color: rgba(139, 92, 246, 0.15);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.05), 0 4px 16px rgba(139, 92, 246, 0.06);
+}
+
+/* Table rows: highlight on hover */
+table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.dark table tbody tr:hover {
+  background-color: rgba(139, 92, 246, 0.04) !important;
+}
+
+table tbody tr:hover {
+  background-color: rgba(139, 92, 246, 0.03) !important;
+}
+
+/* Badges: pop on hover */
+[class*="badge"],
+[class*="Badge"] {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+[class*="badge"]:hover,
+[class*="Badge"]:hover {
+  transform: scale(1.05);
+}
+
+/* Buttons: consistent glow */
+button:not([disabled]):not([class*="ghost"]) {
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+/* Links inside cards */
+a[target="_blank"] {
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+/* Custom scrollbar for RecentlySolved */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.15);
+  border-radius: 100px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.3);
 }

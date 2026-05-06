@@ -3,6 +3,44 @@ import { PlatformService, PlatformLink } from '@/lib/api/platform.service';
 import { ProblemService, Problem } from '@/lib/api/problem.service';
 import { GUEST_PLATFORMS } from '@/lib/guest-data';
 
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_KEY = 'codepulse_dashboard_cache';
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+function saveToStorage<T>(key: string, data: T) {
+  try {
+    const entry: CacheEntry<T> = { data, timestamp: Date.now() };
+    localStorage.setItem(`${CACHE_KEY}_${key}`, JSON.stringify(entry));
+  } catch {}
+}
+
+function loadFromStorage<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(`${CACHE_KEY}_${key}`);
+    if (!raw) return null;
+    const entry: CacheEntry<T> = JSON.parse(raw);
+    // Return data even if stale (component will refresh in background)
+    return entry.data;
+  } catch {
+    return null;
+  }
+}
+
+function isStale(key: string): boolean {
+  try {
+    const raw = localStorage.getItem(`${CACHE_KEY}_${key}`);
+    if (!raw) return true;
+    const entry = JSON.parse(raw);
+    return Date.now() - entry.timestamp > CACHE_TTL;
+  } catch {
+    return true;
+  }
+}
+
 interface DashboardState {
   // Data
   platforms: PlatformLink[];
@@ -17,21 +55,47 @@ interface DashboardState {
   fetchPlatforms: (isGuest?: boolean) => Promise<PlatformLink[]>;
   fetchProblems: (isGuest?: boolean) => Promise<Problem[]>;
   fetchAll: (isGuest?: boolean) => Promise<void>;
+  refreshInBackground: (isGuest?: boolean) => void;
   invalidatePlatforms: () => void;
   invalidateProblems: () => void;
   invalidateAll: () => void;
 }
 
 export const useDashboardStore = create<DashboardState>()((set, get) => ({
-  platforms: [],
-  problems: [],
+  // Initialize from localStorage cache for instant render
+  platforms: (typeof window !== 'undefined' ? loadFromStorage<PlatformLink[]>('platforms') : null) || [],
+  problems: (typeof window !== 'undefined' ? loadFromStorage<Problem[]>('problems') : null) || [],
   platformsLoaded: false,
   problemsLoaded: false,
   loading: false,
 
   fetchPlatforms: async (isGuest = false) => {
-    // Return cached data if already loaded
-    if (get().platformsLoaded) return get().platforms;
+    const state = get();
+
+    // If loaded in memory, return instantly
+    if (state.platformsLoaded) return state.platforms;
+
+    // Try localStorage first for instant render
+    const cached = loadFromStorage<PlatformLink[]>('platforms');
+    if (cached && cached.length > 0 && !isStale('platforms')) {
+      set({ platforms: cached, platformsLoaded: true });
+      return cached;
+    }
+
+    // If we have stale cache, use it immediately but refresh in background
+    if (cached && cached.length > 0) {
+      set({ platforms: cached, platformsLoaded: true });
+      // Background refresh
+      if (!isGuest) {
+        PlatformService.getUserPlatforms()
+          .then(data => {
+            set({ platforms: data });
+            saveToStorage('platforms', data);
+          })
+          .catch(() => {});
+      }
+      return cached;
+    }
 
     if (isGuest) {
       const data = GUEST_PLATFORMS as any;
@@ -42,6 +106,7 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
     try {
       const data = await PlatformService.getUserPlatforms();
       set({ platforms: data, platformsLoaded: true });
+      saveToStorage('platforms', data);
       return data;
     } catch (err) {
       console.error('Failed to fetch platforms:', err);
@@ -51,7 +116,28 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
   },
 
   fetchProblems: async (isGuest = false) => {
-    if (get().problemsLoaded) return get().problems;
+    const state = get();
+
+    if (state.problemsLoaded) return state.problems;
+
+    const cached = loadFromStorage<Problem[]>('problems');
+    if (cached && cached.length > 0 && !isStale('problems')) {
+      set({ problems: cached, problemsLoaded: true });
+      return cached;
+    }
+
+    if (cached && cached.length > 0) {
+      set({ problems: cached, problemsLoaded: true });
+      if (!isGuest) {
+        ProblemService.getAll()
+          .then(data => {
+            set({ problems: data });
+            saveToStorage('problems', data);
+          })
+          .catch(() => {});
+      }
+      return cached;
+    }
 
     if (isGuest) {
       set({ problems: [], problemsLoaded: true });
@@ -61,6 +147,7 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
     try {
       const data = await ProblemService.getAll();
       set({ problems: data, problemsLoaded: true });
+      saveToStorage('problems', data);
       return data;
     } catch (err) {
       console.error('Failed to fetch problems:', err);
@@ -78,12 +165,41 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
     set({ loading: false });
   },
 
-  invalidatePlatforms: () => set({ platformsLoaded: false }),
-  invalidateProblems: () => set({ problemsLoaded: false }),
-  invalidateAll: () => set({
-    platformsLoaded: false,
-    problemsLoaded: false,
-    platforms: [],
-    problems: [],
-  }),
+  // Silent background refresh (called on tab switch)
+  refreshInBackground: (isGuest = false) => {
+    if (isGuest) return;
+    PlatformService.getUserPlatforms()
+      .then(data => {
+        set({ platforms: data });
+        saveToStorage('platforms', data);
+      })
+      .catch(() => {});
+    ProblemService.getAll()
+      .then(data => {
+        set({ problems: data });
+        saveToStorage('problems', data);
+      })
+      .catch(() => {});
+  },
+
+  invalidatePlatforms: () => {
+    set({ platformsLoaded: false });
+    try { localStorage.removeItem(`${CACHE_KEY}_platforms`); } catch {}
+  },
+  invalidateProblems: () => {
+    set({ problemsLoaded: false });
+    try { localStorage.removeItem(`${CACHE_KEY}_problems`); } catch {}
+  },
+  invalidateAll: () => {
+    set({
+      platformsLoaded: false,
+      problemsLoaded: false,
+      platforms: [],
+      problems: [],
+    });
+    try {
+      localStorage.removeItem(`${CACHE_KEY}_platforms`);
+      localStorage.removeItem(`${CACHE_KEY}_problems`);
+    } catch {}
+  },
 }));

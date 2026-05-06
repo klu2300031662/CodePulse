@@ -63,7 +63,7 @@ export default function AnalyticsPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in-up">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h2>
         <p className="text-muted-foreground">Deep dive into your coding performance and statistics across all platforms.</p>

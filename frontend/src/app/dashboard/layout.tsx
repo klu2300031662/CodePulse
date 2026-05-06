@@ -56,7 +56,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Logo */}
         <div className="h-16 flex items-center px-6 border-b border-zinc-200 dark:border-white/[0.06]">
           <Link href="/dashboard" className="flex items-center gap-3 group">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:shadow-violet-500/30 transition-shadow">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:shadow-violet-500/40 group-hover:scale-105 transition-all duration-300">
               <span className="text-white font-bold text-sm">CP</span>
             </div>
             <span className="text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-blue-600 dark:from-violet-400 dark:to-blue-400">
@@ -78,20 +78,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={item.href}
                 className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 relative ${
                   active
-                    ? "bg-violet-50 dark:bg-white/[0.06] text-violet-700 dark:text-white"
-                    : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.03]"
+                    ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white shadow-sm shadow-violet-500/5 dark:shadow-violet-500/10"
+                    : "text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06] hover:shadow-sm hover:shadow-violet-500/5 dark:hover:shadow-violet-500/10"
                 }`}
               >
                 {/* Active indicator */}
                 {active && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-gradient-to-b from-violet-500 to-blue-500 dark:from-violet-400 dark:to-blue-400" />
                 )}
+                {/* Hover glow - subtle left bar that appears on hover */}
+                {!active && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 h-0 w-[3px] rounded-r-full bg-gradient-to-b from-violet-400/50 to-blue-400/50 transition-all duration-300 group-hover:h-4 opacity-0 group-hover:opacity-100" />
+                )}
                 <item.icon
-                  className={`h-[18px] w-[18px] transition-colors ${
-                    active ? "text-violet-500 dark:text-violet-400" : "text-zinc-400 dark:text-zinc-600 group-hover:text-zinc-500 dark:group-hover:text-zinc-400"
+                  className={`h-[18px] w-[18px] transition-all duration-200 ${
+                    active
+                      ? "text-violet-500 dark:text-violet-400"
+                      : "text-zinc-400 dark:text-zinc-600 group-hover:text-violet-500 dark:group-hover:text-violet-400 group-hover:scale-110"
                   }`}
                 />
-                <span>{item.label}</span>
+                <span className="transition-all duration-200">{item.label}</span>
+                {/* Hover arrow indicator */}
+                <div className={`ml-auto opacity-0 -translate-x-2 transition-all duration-200 ${active ? '' : 'group-hover:opacity-60 group-hover:translate-x-0'}`}>
+                  <svg className="h-3 w-3 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </Link>
             )
           })}
@@ -101,13 +113,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="border-t border-zinc-200 dark:border-white/[0.06] p-3">
           <Link
             href="/settings"
-            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
               pathname?.startsWith("/settings")
-                ? "bg-violet-50 dark:bg-white/[0.06] text-violet-700 dark:text-white"
-                : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.03]"
+                ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white"
+                : "text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06] hover:shadow-sm hover:shadow-violet-500/5"
             }`}
           >
-            <Settings className="h-[18px] w-[18px] text-zinc-400 dark:text-zinc-600" />
+            <Settings className="h-[18px] w-[18px] text-zinc-400 dark:text-zinc-600 group-hover:text-violet-500 dark:group-hover:text-violet-400 group-hover:rotate-90 transition-all duration-300" />
             <span>Settings</span>
           </Link>
         </div>
@@ -147,16 +159,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     onClick={() => setMobileMenuOpen(false)}
                     className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 relative ${
                       active
-                        ? "bg-violet-50 dark:bg-white/[0.06] text-violet-700 dark:text-white"
-                        : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.03]"
+                        ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white"
+                        : "text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06]"
                     }`}
                   >
                     {active && (
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-gradient-to-b from-violet-500 to-blue-500" />
                     )}
                     <item.icon
-                      className={`h-[18px] w-[18px] ${
-                        active ? "text-violet-500 dark:text-violet-400" : "text-zinc-400 dark:text-zinc-600"
+                      className={`h-[18px] w-[18px] transition-all duration-200 ${
+                        active
+                          ? "text-violet-500 dark:text-violet-400"
+                          : "text-zinc-400 dark:text-zinc-600 group-hover:text-violet-500 dark:group-hover:text-violet-400"
                       }`}
                     />
                     <span>{item.label}</span>
@@ -177,7 +191,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               id="mobile-menu-toggle"
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden h-9 w-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
+              className="lg:hidden h-9 w-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-violet-600 dark:text-zinc-400 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] transition-all duration-200 hover:shadow-sm"
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -192,11 +206,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Search */}
             <button
               id="header-search"
-              className="h-9 w-9 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-all duration-200"
+              className="h-9 w-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-violet-600 dark:text-zinc-500 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] transition-all duration-200 hover:shadow-sm hover:scale-105"
             >
               <Search className="h-4 w-4" />
             </button>
@@ -204,7 +218,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Notifications */}
             <button
               id="header-notifications"
-              className="relative h-9 w-9 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-all duration-200"
+              className="relative h-9 w-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-violet-600 dark:text-zinc-500 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] transition-all duration-200 hover:shadow-sm hover:scale-105"
             >
               <Bell className="h-4 w-4" />
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-violet-500 ring-2 ring-white dark:ring-[#0a0a1f]" />
@@ -215,7 +229,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               variant="ghost"
               size="icon"
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-              className="h-9 w-9 rounded-lg text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
+              className="h-9 w-9 rounded-xl text-zinc-400 hover:text-violet-600 dark:text-zinc-500 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] transition-all duration-200 hover:shadow-sm hover:scale-105"
             >
               <Sun className="h-4 w-4 dark:hidden" />
               <Moon className="h-4 w-4 hidden dark:block" />

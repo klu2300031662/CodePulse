@@ -31,7 +31,7 @@ export default function ContestsPage() {
   const filteredContests = upcomingContests.filter(c => linkedPlatformNames.includes(c.platform)).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in-up">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Upcoming Contests</h2>
         <p className="text-muted-foreground">View scheduled and upcoming contests based on your linked platforms.</p>
