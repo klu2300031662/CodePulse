@@ -26,13 +26,19 @@ const platformGradients: Record<string, string> = {
   AtCoder: "from-gray-500/10 to-zinc-500/5",
 }
 
-export default function LinkedPlatforms() {
-  const [platforms, setPlatforms] = useState<PlatformLink[]>([])
+interface LinkedPlatformsProps {
+  prefetchedPlatforms?: PlatformLink[]
+}
+
+export default function LinkedPlatforms({ prefetchedPlatforms }: LinkedPlatformsProps) {
+  const [platforms, setPlatforms] = useState<PlatformLink[]>(prefetchedPlatforms || [])
   const [expandedId, setExpandedId] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!prefetchedPlatforms)
   const user = useAuthStore((state) => state.user) as any
 
   useEffect(() => {
+    if (prefetchedPlatforms) return
+
     if (user?.isGuest) {
       setPlatforms(GUEST_PLATFORMS as any)
       setLoading(false)
@@ -42,7 +48,14 @@ export default function LinkedPlatforms() {
       .then((res) => setPlatforms(res))
       .catch((err) => console.error(err))
       .finally(() => setLoading(false))
-  }, [user?.isGuest])
+  }, [user?.isGuest, prefetchedPlatforms])
+
+  useEffect(() => {
+    if (prefetchedPlatforms) {
+      setPlatforms(prefetchedPlatforms)
+      setLoading(false)
+    }
+  }, [prefetchedPlatforms])
 
   const toggleExpand = (id: number) => {
     setExpandedId(expandedId === id ? null : id)

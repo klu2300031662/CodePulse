@@ -143,7 +143,7 @@ export default function DashboardPage() {
           <PrepHub />
 
           {/* Linked Platforms */}
-          <LinkedPlatforms />
+          <LinkedPlatforms prefetchedPlatforms={data?.platforms} />
 
           {/* Company Prep (Future) */}
           <CompanyPrep />
