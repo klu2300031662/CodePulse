@@ -122,9 +122,24 @@ const CaptchaBox = forwardRef<CaptchaHandle, CaptchaBoxProps>(
       setVerified(false)
       setError(false)
       onVerify?.(false)
-      // Draw after state update
-      setTimeout(() => drawCaptcha(newCode), 0)
-    }, [drawCaptcha, onVerify])
+    }, [onVerify])
+
+    // Redraw canvas whenever captchaCode changes and the canvas is available.
+    // When transitioning from "verified" back to the canvas view, the canvas
+    // element may not be mounted yet on the first render, so we retry briefly.
+    useEffect(() => {
+      if (!captchaCode) return
+
+      const tryDraw = (attempts = 0) => {
+        if (canvasRef.current) {
+          drawCaptcha(captchaCode)
+        } else if (attempts < 10) {
+          // Canvas not mounted yet (transitioning from verified view) — retry
+          setTimeout(() => tryDraw(attempts + 1), 30)
+        }
+      }
+      tryDraw()
+    }, [captchaCode, drawCaptcha])
 
     useEffect(() => {
       regenerate()
