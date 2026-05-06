@@ -20,23 +20,36 @@ function StatCard({ icon, label, value, gradient, glowColor, delay }: StatCardPr
   const [animatedValue, setAnimatedValue] = useState(0)
 
   useEffect(() => {
+    if (value <= 0) {
+      setAnimatedValue(0)
+      return
+    }
+
+    const delayMs = parseInt(delay) || 0
+    let rafId: number
+    let startTime: number | null = null
+    const duration = 1400 // ms
+
     const timer = setTimeout(() => {
-      let start = 0
-      const end = value
-      const duration = 1200
-      const stepTime = Math.max(Math.floor(duration / end), 16)
-      const step = () => {
-        start += Math.max(1, Math.floor(end / (duration / stepTime)))
-        if (start >= end) {
-          setAnimatedValue(end)
-        } else {
-          setAnimatedValue(start)
-          requestAnimationFrame(step)
+      const animate = (timestamp: number) => {
+        if (!startTime) startTime = timestamp
+        const elapsed = timestamp - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        // easeOutQuad for a natural deceleration
+        const eased = 1 - (1 - progress) * (1 - progress)
+        const current = Math.round(eased * value)
+        setAnimatedValue(current)
+        if (progress < 1) {
+          rafId = requestAnimationFrame(animate)
         }
       }
-      if (end > 0) step()
-    }, parseInt(delay))
-    return () => clearTimeout(timer)
+      rafId = requestAnimationFrame(animate)
+    }, delayMs)
+
+    return () => {
+      clearTimeout(timer)
+      if (rafId) cancelAnimationFrame(rafId)
+    }
   }, [value, delay])
 
   return (

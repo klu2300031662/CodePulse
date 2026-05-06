@@ -79,8 +79,8 @@ export default function PrepHub() {
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-zinc-900 dark:text-white text-sm">Interview Prep</h3>
-              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">Curated resources for your next interview</p>
+              <h3 className="font-semibold text-zinc-900 dark:text-white text-sm">Placement Useful Sheets</h3>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">Curated sheets & resources for placements</p>
             </div>
           </div>
         </div>
