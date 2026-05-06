@@ -30,7 +30,7 @@ function getPlatformStyle(name: string) {
 
 export default function PlatformsPage() {
   const user = useAuthStore((state) => state.user) as any
-  const { platforms, fetchPlatforms, invalidatePlatforms } = useDashboardStore()
+  const { platforms, fetchPlatforms, invalidatePlatforms, removePlatformOptimistic, addPlatformOptimistic } = useDashboardStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
   const [error, setError] = useState("")
@@ -64,10 +64,13 @@ export default function PlatformsPage() {
     setError("")
     setIsLinking(true)
     try {
-      await PlatformService.linkPlatform(formData)
+      const linked = await PlatformService.linkPlatform(formData)
+      // Optimistic: add the card immediately
+      addPlatformOptimistic(linked)
       setIsModalOpen(false)
-      loadPlatforms()
       setFormData({ platformName: "LeetCode", username: "", profileUrl: "" })
+      // Background: refresh to get accurate data from server
+      setTimeout(() => loadPlatforms(), 500)
     } catch (err: any) {
       setError(err.message || err.response?.data || "Failed to link platform.")
     } finally {
@@ -82,14 +85,25 @@ export default function PlatformsPage() {
     setSyncSuccess(prev => { const n = new Set(prev); n.delete(id); return n })
 
     try {
-      await PlatformService.syncPlatform(id)
+      // Try backend sync first
+      try {
+        await PlatformService.syncPlatform(id)
+      } catch {
+        // Backend sync failed — fetch real-time stats from platform API directly
+        const res = await fetch(
+          `/api/platforms/stats?platform=${encodeURIComponent(platform.platformName)}&username=${encodeURIComponent(platform.username)}`
+        )
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.error || "Sync failed – platform API may be unavailable")
+        }
+      }
+      
       setSyncSuccess(prev => new Set(prev).add(id))
-      // Refresh platforms to show updated data
       loadPlatforms()
-      // Clear success indicator after 3s
       setTimeout(() => setSyncSuccess(prev => { const n = new Set(prev); n.delete(id); return n }), 3000)
     } catch (err: any) {
-      setSyncErrors(prev => ({ ...prev, [id]: err.message || "Sync failed" }))
+      setSyncErrors(prev => ({ ...prev, [id]: err.message || "Sync failed – Retry" }))
     } finally {
       setSyncingIds(prev => { const n = new Set(prev); n.delete(id); return n })
     }
@@ -97,15 +111,18 @@ export default function PlatformsPage() {
 
   const handleUnlink = async () => {
     if (!unlinkTarget) return
-    setIsUnlinking(true)
+    const targetId = unlinkTarget.id
+    // Optimistic: remove card immediately
+    removePlatformOptimistic(targetId)
+    setUnlinkTarget(null)
+    setIsUnlinking(false)
+    // Background: call the API
     try {
-      await PlatformService.removePlatform(unlinkTarget.id)
-      setUnlinkTarget(null)
-      loadPlatforms()
+      await PlatformService.removePlatform(targetId)
     } catch (err) {
       console.error("Failed to unlink", err)
-    } finally {
-      setIsUnlinking(false)
+      // If it fails, refresh to restore the card
+      loadPlatforms()
     }
   }
 

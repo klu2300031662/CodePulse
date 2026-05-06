@@ -59,6 +59,11 @@ interface DashboardState {
   invalidatePlatforms: () => void;
   invalidateProblems: () => void;
   invalidateAll: () => void;
+
+  // Optimistic updates
+  setPlatforms: (platforms: PlatformLink[]) => void;
+  removePlatformOptimistic: (id: number) => void;
+  addPlatformOptimistic: (platform: PlatformLink) => void;
 }
 
 export const useDashboardStore = create<DashboardState>()((set, get) => ({
@@ -201,5 +206,23 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
       localStorage.removeItem(`${CACHE_KEY}_platforms`);
       localStorage.removeItem(`${CACHE_KEY}_problems`);
     } catch {}
+  },
+
+  // Optimistic updates — instant UI changes
+  setPlatforms: (platforms: PlatformLink[]) => {
+    set({ platforms, platformsLoaded: true });
+    saveToStorage('platforms', platforms);
+  },
+
+  removePlatformOptimistic: (id: number) => {
+    const updated = get().platforms.filter(p => p.id !== id);
+    set({ platforms: updated });
+    saveToStorage('platforms', updated);
+  },
+
+  addPlatformOptimistic: (platform: PlatformLink) => {
+    const updated = [...get().platforms, platform];
+    set({ platforms: updated });
+    saveToStorage('platforms', updated);
   },
 }));

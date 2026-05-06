@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import api from "@/lib/api/axios"
 import { Trophy, ExternalLink, Clock, Loader2 } from "lucide-react"
 import { useAuthStore } from "@/lib/store/auth.store"
 
@@ -51,7 +50,6 @@ export default function ContestList() {
 
   useEffect(() => {
     if (user?.isGuest) {
-      // Show mock contests for guest mode
       setContests([
         { platform: 'LeetCode', title: 'Weekly Contest 398', startTime: Math.floor((Date.now() + 2 * 86400000) / 1000), url: '#' },
         { platform: 'Codeforces', title: 'Codeforces Round #950', startTime: Math.floor((Date.now() + 5 * 86400000) / 1000), url: '#' },
@@ -60,10 +58,17 @@ export default function ContestList() {
       setLoading(false)
       return
     }
-    api
-      .get("/contests/all")
-      .then((res) => {
-        setContests(res.data || [])
+    // Fetch live contest data from our proxy API
+    fetch("/api/contests")
+      .then((res) => res.json())
+      .then((data) => {
+        const mapped = (data.contests || []).map((c: any) => ({
+          platform: c.platform,
+          title: c.title,
+          startTime: c.startTime,
+          url: c.url,
+        }))
+        setContests(mapped)
       })
       .catch((err) => console.error("Contest fetch error", err))
       .finally(() => setLoading(false))
