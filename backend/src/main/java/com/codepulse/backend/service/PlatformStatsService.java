@@ -47,7 +47,6 @@ public class PlatformStatsService {
             case "codechef":
                 return fetchCodeChef(username);
             case "geeksforgeeks":
-                return fetchGFG(username);
             case "hackerrank":
             case "interviewbit":
                 PlatformStats notPublic = new PlatformStats();

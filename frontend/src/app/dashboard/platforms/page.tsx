@@ -13,7 +13,7 @@ import { useDashboardStore } from "@/lib/store/dashboard.store"
 import { useAuthStore } from "@/lib/store/auth.store"
 import { Link2, Unlink, RefreshCw, AlertCircle, Plus, CheckCircle2, XCircle, Clock, Loader2, AlertTriangle, Lock, ShieldAlert } from "lucide-react"
 
-const NO_PUBLIC_API_PLATFORMS = ["HackerRank", "InterviewBit"]
+const NO_PUBLIC_API_PLATFORMS = ["HackerRank", "InterviewBit", "GeeksForGeeks"]
 
 const SUPPORTED_PLATFORMS = ["LeetCode", "CodeChef", "HackerRank", "Codeforces", "InterviewBit", "GeeksForGeeks"]
 

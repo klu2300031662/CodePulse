@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
       case "codechef":
         return await fetchCodeChef(username);
       case "geeksforgeeks":
-        return await fetchGFG(username);
       case "hackerrank":
       case "interviewbit":
         return NextResponse.json({
