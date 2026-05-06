@@ -76,19 +76,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 relative ${
+                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 relative border ${
                   active
-                    ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white shadow-sm shadow-violet-500/5 dark:shadow-violet-500/10"
-                    : "text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06] hover:shadow-sm hover:shadow-violet-500/5 dark:hover:shadow-violet-500/10"
+                    ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white border-violet-300 dark:border-violet-500/30 shadow-md shadow-violet-500/10 dark:shadow-violet-500/20 -translate-y-[1px]"
+                    : "border-transparent text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06] hover:border-violet-300/70 dark:hover:border-violet-500/25 hover:shadow-md hover:shadow-violet-500/10 dark:hover:shadow-violet-500/15 hover:-translate-y-[1px]"
                 }`}
               >
-                {/* Active indicator */}
+                {/* Gradient top bar — visible on active and hover */}
+                <div className={`absolute top-0 left-2 right-2 h-[2px] rounded-b-full bg-gradient-to-r from-violet-500 to-blue-500 transition-opacity duration-300 ${
+                  active ? "opacity-60" : "opacity-0 group-hover:opacity-40"
+                }`} />
+
+                {/* Active indicator left bar */}
                 {active && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-gradient-to-b from-violet-500 to-blue-500 dark:from-violet-400 dark:to-blue-400" />
-                )}
-                {/* Hover glow - subtle left bar that appears on hover */}
-                {!active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 h-0 w-[3px] rounded-r-full bg-gradient-to-b from-violet-400/50 to-blue-400/50 transition-all duration-300 group-hover:h-4 opacity-0 group-hover:opacity-100" />
                 )}
                 <item.icon
                   className={`h-[18px] w-[18px] transition-all duration-200 ${
@@ -98,12 +99,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   }`}
                 />
                 <span className="transition-all duration-200">{item.label}</span>
-                {/* Hover arrow indicator */}
-                <div className={`ml-auto opacity-0 -translate-x-2 transition-all duration-200 ${active ? '' : 'group-hover:opacity-60 group-hover:translate-x-0'}`}>
-                  <svg className="h-3 w-3 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
               </Link>
             )
           })}
@@ -113,10 +108,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="border-t border-zinc-200 dark:border-white/[0.06] p-3">
           <Link
             href="/settings"
-            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300 border ${
               pathname?.startsWith("/settings")
-                ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white"
-                : "text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06] hover:shadow-sm hover:shadow-violet-500/5"
+                ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white border-violet-300 dark:border-violet-500/30 shadow-md shadow-violet-500/10"
+                : "border-transparent text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06] hover:border-violet-300/70 dark:hover:border-violet-500/25 hover:shadow-md hover:shadow-violet-500/10 hover:-translate-y-[1px]"
             }`}
           >
             <Settings className="h-[18px] w-[18px] text-zinc-400 dark:text-zinc-600 group-hover:text-violet-500 dark:group-hover:text-violet-400 group-hover:rotate-90 transition-all duration-300" />
