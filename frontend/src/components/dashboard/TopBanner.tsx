@@ -1,7 +1,6 @@
 "use client"
 
-import { Sparkles, ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Sparkles, Rocket } from "lucide-react"
 
 export default function TopBanner() {
   return (
@@ -29,23 +28,30 @@ export default function TopBanner() {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-              Monthly Rewind Ready
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 font-medium uppercase tracking-wider">
-                New
+              Monthly Rewind
+              <span className="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full bg-gradient-to-r from-violet-500/20 to-blue-500/20 dark:from-violet-500/30 dark:to-blue-500/30 text-violet-600 dark:text-violet-300 font-semibold uppercase tracking-wider border border-violet-300/30 dark:border-violet-400/20">
+                <Rocket className="h-3 w-3" />
+                Coming Soon
               </span>
             </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-              See your coding journey highlights from this month
+              Your monthly coding summary will appear here.
             </p>
           </div>
         </div>
-        <Button
-          id="monthly-rewind-cta"
-          className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white rounded-xl px-5 py-2.5 text-sm font-medium shadow-lg shadow-violet-500/20 transition-all duration-300 hover:shadow-violet-500/30 hover:translate-y-[-1px] group"
-        >
-          View Rewind
-          <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-        </Button>
+
+        {/* Decorative pulse animation */}
+        <div className="hidden sm:flex items-center gap-3">
+          <div className="relative">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500/10 to-blue-500/10 dark:from-violet-500/20 dark:to-blue-500/20 flex items-center justify-center">
+              <div className="h-3 w-3 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 animate-pulse" />
+            </div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-violet-500/5 to-blue-500/5 animate-ping" />
+          </div>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium max-w-[140px] leading-tight">
+            We&apos;re building something exciting for you
+          </p>
+        </div>
       </div>
     </div>
   )

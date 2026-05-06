@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
-import { Hash, CheckCircle2, Star } from "lucide-react"
+import { ProblemService } from "@/lib/api/problem.service"
+import { Hash, Star } from "lucide-react"
 import { useAuthStore } from "@/lib/store/auth.store"
-import { GUEST_PLATFORMS } from "@/lib/guest-data"
+import { GUEST_PLATFORMS, GUEST_STARRED_COUNT } from "@/lib/guest-data"
 
 interface StatCardProps {
   icon: React.ReactNode
@@ -74,51 +75,44 @@ function StatCard({ icon, label, value, gradient, glowColor, delay }: StatCardPr
 
 export default function StatsCards() {
   const [platforms, setPlatforms] = useState<PlatformLink[]>([])
+  const [starredCount, setStarredCount] = useState(0)
   const user = useAuthStore((state) => state.user) as any
 
   useEffect(() => {
     if (user?.isGuest) {
       // Use mock data for guest mode — no API calls
       setPlatforms(GUEST_PLATFORMS as any)
+      setStarredCount(GUEST_STARRED_COUNT)
       return
     }
     PlatformService.getUserPlatforms()
       .then((res) => setPlatforms(res))
       .catch((err) => console.error(err))
+
+    ProblemService.getStarredCount()
+      .then((count) => setStarredCount(count))
+      .catch((err) => console.error(err))
   }, [user?.isGuest])
 
   const totalQuestions = platforms.reduce((sum, p) => sum + (p.totalSolved || 0), 0)
-  const completedQuestions = platforms.reduce(
-    (sum, p) => sum + (p.easySolved || 0) + (p.mediumSolved || 0) + (p.hardSolved || 0),
-    0
-  )
-  const starredQuestions = 0 // Future feature
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <StatCard
         icon={<Hash className="h-6 w-6 text-white" />}
-        label="Total Questions"
+        label="All Platforms Total"
         value={totalQuestions}
         gradient="from-blue-500 to-cyan-400"
         glowColor="bg-blue-500"
         delay="0"
       />
       <StatCard
-        icon={<CheckCircle2 className="h-6 w-6 text-white" />}
-        label="Completed"
-        value={completedQuestions}
-        gradient="from-emerald-500 to-teal-400"
-        glowColor="bg-emerald-500"
-        delay="100"
-      />
-      <StatCard
         icon={<Star className="h-6 w-6 text-white" />}
         label="Starred"
-        value={starredQuestions}
+        value={starredCount}
         gradient="from-amber-500 to-orange-400"
         glowColor="bg-amber-500"
-        delay="200"
+        delay="100"
       />
     </div>
   )

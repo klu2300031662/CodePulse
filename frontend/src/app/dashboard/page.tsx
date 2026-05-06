@@ -3,7 +3,7 @@
 import { useAuthStore } from "@/lib/store/auth.store"
 import TopBanner from "@/components/dashboard/TopBanner"
 import StatsCards from "@/components/dashboard/StatsCards"
-import RecentSheets from "@/components/dashboard/RecentSheets"
+import StarredQuestions from "@/components/dashboard/StarredQuestions"
 import TopicAnalysis from "@/components/dashboard/TopicAnalysis"
 import ContestList from "@/components/dashboard/ContestList"
 import PrepHub from "@/components/dashboard/PrepHub"
@@ -43,8 +43,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
         {/* Center Column */}
         <div className="space-y-6 min-w-0">
-          {/* Recent / Sheets */}
-          <RecentSheets />
+          {/* Starred Questions */}
+          <StarredQuestions />
 
           {/* Topic Analysis */}
           <TopicAnalysis />

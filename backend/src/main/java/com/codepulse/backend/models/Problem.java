@@ -48,6 +48,8 @@ public class Problem {
     
     // tags could be stored as comma separated strings or a separate table
     private String tags;
+
+    private boolean starred = false;
     
     public Problem(User user, String title, String platform, String difficulty, String status, LocalDate dateSolved) {
         this.user = user;

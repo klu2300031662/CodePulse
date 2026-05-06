@@ -20,6 +20,10 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     long countByUser(User user);
 
     long countByUserAndDifficultyIgnoreCase(User user, String difficulty);
+
+    List<Problem> findByUserAndStarredTrueOrderByDateSolvedDesc(User user);
+
+    long countByUserAndStarredTrue(User user);
     
     @Query("SELECT p.platform AS platform, COUNT(p) AS count FROM Problem p WHERE p.user = :user GROUP BY p.platform")
     List<Map<String, Object>> countProblemsByPlatform(User user);

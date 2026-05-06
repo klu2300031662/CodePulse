@@ -49,6 +49,33 @@ public class ProblemController {
         return ResponseEntity.ok(problems);
     }
 
+    @GetMapping("/starred")
+    public ResponseEntity<?> getStarredProblems() {
+        User user = getCurrentUser();
+        List<Problem> starred = problemRepository.findByUserAndStarredTrueOrderByDateSolvedDesc(user);
+        return ResponseEntity.ok(starred);
+    }
+
+    @GetMapping("/starred/count")
+    public ResponseEntity<?> getStarredCount() {
+        User user = getCurrentUser();
+        long count = problemRepository.countByUserAndStarredTrue(user);
+        return ResponseEntity.ok(java.util.Map.of("count", count));
+    }
+
+    @PatchMapping("/{id}/star")
+    public ResponseEntity<?> toggleStar(@PathVariable Long id) {
+        User user = getCurrentUser();
+        Problem problem = problemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Problem", "id", id));
+        if (!problem.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("You do not have permission to modify this problem.");
+        }
+        problem.setStarred(!problem.isStarred());
+        problemRepository.save(problem);
+        return ResponseEntity.ok(problem);
+    }
+
     @PostMapping
     public ResponseEntity<?> addProblem(@RequestBody ProblemPayload payload) {
         User user = getCurrentUser();
@@ -57,6 +84,7 @@ public class ProblemController {
         problem.setUrl(payload.getUrl());
         problem.setNotes(payload.getNotes());
         problem.setTags(payload.getTags());
+        problem.setStarred(payload.isStarred());
         
         problemRepository.save(problem);
         return ResponseEntity.ok(problem);
@@ -80,6 +108,7 @@ public class ProblemController {
         problem.setUrl(payload.getUrl());
         problem.setNotes(payload.getNotes());
         problem.setTags(payload.getTags());
+        problem.setStarred(payload.isStarred());
         if (payload.getDateSolved() != null) problem.setDateSolved(payload.getDateSolved());
         
         problemRepository.save(problem);
@@ -111,6 +140,7 @@ class ProblemPayload {
     private String notes;
     private String tags;
     private LocalDate dateSolved;
+    private boolean starred;
     
     // Getters
     public String getTitle() { return title; }
@@ -121,6 +151,7 @@ class ProblemPayload {
     public String getNotes() { return notes; }
     public String getTags() { return tags; }
     public LocalDate getDateSolved() { return dateSolved; }
+    public boolean isStarred() { return starred; }
     
     // Setters
     public void setTitle(String t) { title = t; }
@@ -131,4 +162,5 @@ class ProblemPayload {
     public void setNotes(String n) { notes = n; }
     public void setTags(String ts) { tags = ts; }
     public void setDateSolved(LocalDate dt) { dateSolved = dt; }
+    public void setStarred(boolean s) { starred = s; }
 }

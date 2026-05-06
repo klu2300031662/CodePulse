@@ -59,6 +59,16 @@ export const GUEST_RECENT_ACTIVITY = [
   { id: 5, title: 'Graph Coloring', difficulty: 'Medium', platform: 'CodeChef', date: '2 days ago', status: 'Solved' },
 ];
 
+export const GUEST_STARRED_COUNT = 5;
+
+export const GUEST_STARRED_PROBLEMS = [
+  { id: 1, title: 'Two Sum', url: 'https://leetcode.com/problems/two-sum/', platform: 'LeetCode', difficulty: 'Easy', status: 'Solved', dateSolved: '2026-05-04', notes: '', tags: 'arrays,hash-map', starred: true },
+  { id: 2, title: 'Merge Intervals', url: 'https://leetcode.com/problems/merge-intervals/', platform: 'LeetCode', difficulty: 'Medium', status: 'Solved', dateSolved: '2026-05-03', notes: '', tags: 'sorting,intervals', starred: true },
+  { id: 3, title: 'LRU Cache', url: 'https://leetcode.com/problems/lru-cache/', platform: 'LeetCode', difficulty: 'Hard', status: 'Solved', dateSolved: '2026-05-02', notes: '', tags: 'design,linked-list', starred: true },
+  { id: 4, title: 'Binary Search', url: 'https://codeforces.com/problemset/problem/1760/A', platform: 'Codeforces', difficulty: 'Easy', status: 'Solved', dateSolved: '2026-05-01', notes: '', tags: 'binary-search', starred: true },
+  { id: 5, title: 'Graph Coloring', url: 'https://www.codechef.com/problems/GRAPHCOL', platform: 'CodeChef', difficulty: 'Medium', status: 'Solved', dateSolved: '2026-04-30', notes: '', tags: 'graphs', starred: true },
+];
+
 export const GUEST_TOPIC_STATS = [
   { topic: 'Arrays', solved: 68, total: 100 },
   { topic: 'Dynamic Programming', solved: 32, total: 80 },
