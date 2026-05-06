@@ -252,67 +252,96 @@ public class PlatformAnalyticsService {
     private Map<String, Object> fetchCodeChefAnalytics(String username) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("platform", "CodeChef");
+        boolean gotData = false;
 
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://codechef-api.vercel.app/handle/" + username))
-                    .header("User-Agent", "Mozilla/5.0")
-                    .timeout(Duration.ofSeconds(10))
-                    .GET().build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                String body = response.body();
-                result.put("currentRating", extractJsonNumber(body, "\"currentRating\":"));
-                result.put("highestRating", extractJsonNumber(body, "\"highestRating\":"));
-                result.put("stars", extractJsonStringVal(body, "stars"));
-                result.put("globalRank", extractJsonNumber(body, "\"globalRank\":"));
-                result.put("countryRank", extractJsonNumber(body, "\"countryRank\":"));
-
-                // Extract recent contest ratings
-                List<Map<String, Object>> recentContests = new ArrayList<>();
-                String[] contestParts = body.split("\"name\":");
-                for (int i = 1; i < contestParts.length && i <= 10; i++) {
-                    String part = contestParts[i];
-                    if (part.contains("\"rating\"")) {
-                        Map<String, Object> entry = new LinkedHashMap<>();
-                        int nameEnd = part.indexOf("\"", 1);
-                        if (nameEnd > 1) entry.put("name", part.substring(1, nameEnd));
-                        entry.put("rating", extractInlineNumber(part, "rating"));
-                        entry.put("rank", extractInlineNumber(part, "rank"));
-                        recentContests.add(entry);
-                    }
-                }
-                result.put("recentContests", recentContests);
-            } else {
-                result.put("error", "CodeChef API returned " + response.statusCode());
-            }
-        } catch (Exception e) {
-            logger.error("CodeChef analytics failed for '{}': {}", username, e.getMessage());
-            result.put("error", "CodeChef API unavailable");
-        }
-
-        // Fallback: scrape profile page for totalSolved
+        // Approach 1: Scrape CodeChef profile page directly (most reliable)
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://www.codechef.com/users/" + username))
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                    .header("Accept", "text/html")
-                    .timeout(Duration.ofSeconds(10))
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml")
+                    .timeout(Duration.ofSeconds(12))
                     .GET().build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 String body = response.body();
+
+                // Total problems solved
                 java.util.regex.Matcher m = java.util.regex.Pattern
                         .compile("Total\\s+Problems\\s+Solved\\s*:\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
                         .matcher(body);
                 if (m.find()) {
                     result.put("totalSolved", Integer.parseInt(m.group(1)));
+                    gotData = true;
                 }
+
+                // Rating from page
+                java.util.regex.Matcher rm = java.util.regex.Pattern
+                        .compile("(?:rating|Rating)[\\s\\S]*?(\\d{3,4})").matcher(body);
+                if (rm.find()) {
+                    result.put("currentRating", Integer.parseInt(rm.group(1)));
+                    gotData = true;
+                }
+
+                // Stars
+                java.util.regex.Matcher sm = java.util.regex.Pattern
+                        .compile("(\\d)\\s*(?:★|star)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(body);
+                if (sm.find()) {
+                    result.put("stars", sm.group(1) + "★");
+                }
+
+                logger.info("CodeChef scrape: got data for '{}', totalSolved={}", username, result.get("totalSolved"));
             }
         } catch (Exception e) {
-            logger.warn("CodeChef scrape fallback failed for '{}': {}", username, e.getMessage());
+            logger.warn("CodeChef profile scrape failed for '{}': {}", username, e.getMessage());
+        }
+
+        // Approach 2: Community API (may be rate-limited)
+        if (!gotData) {
+            try {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://codechef-api.vercel.app/handle/" + username))
+                        .header("User-Agent", "Mozilla/5.0")
+                        .timeout(Duration.ofSeconds(10))
+                        .GET().build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    String body = response.body();
+                    result.put("currentRating", extractJsonNumber(body, "\"currentRating\":"));
+                    result.put("highestRating", extractJsonNumber(body, "\"highestRating\":"));
+                    result.put("stars", extractJsonStringVal(body, "stars"));
+                    result.put("globalRank", extractJsonNumber(body, "\"globalRank\":"));
+                    result.put("countryRank", extractJsonNumber(body, "\"countryRank\":"));
+
+                    List<Map<String, Object>> recentContests = new ArrayList<>();
+                    String[] contestParts = body.split("\"name\":");
+                    for (int i = 1; i < contestParts.length && i <= 10; i++) {
+                        String part = contestParts[i];
+                        if (part.contains("\"rating\"")) {
+                            Map<String, Object> entry = new LinkedHashMap<>();
+                            int nameEnd = part.indexOf("\"", 1);
+                            if (nameEnd > 1) entry.put("name", part.substring(1, nameEnd));
+                            entry.put("rating", extractInlineNumber(part, "rating"));
+                            entry.put("rank", extractInlineNumber(part, "rank"));
+                            recentContests.add(entry);
+                        }
+                    }
+                    result.put("recentContests", recentContests);
+                    gotData = true;
+                } else {
+                    logger.warn("CodeChef community API returned {} for '{}'", response.statusCode(), username);
+                }
+            } catch (Exception e) {
+                logger.warn("CodeChef community API failed for '{}': {}", username, e.getMessage());
+            }
+        }
+
+        // If nothing worked, mark as private
+        if (!gotData) {
+            result.put("isPrivate", true);
+            result.put("note", "CodeChef profile data is currently unavailable. The profile may be private or the API is temporarily down.");
         }
 
         return result;
@@ -385,32 +414,125 @@ public class PlatformAnalyticsService {
     private Map<String, Object> fetchGFGAnalytics(String username) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("platform", "GeeksForGeeks");
+        boolean gotData = false;
 
-        // Community API
+        // Approach 1: Scrape GFG profile page directly
         try {
+            HttpClient scrapeClient = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .followRedirects(HttpClient.Redirect.ALWAYS)
+                    .build();
+
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://geeks-for-geeks-stats-api.vercel.app/?userName=" + username))
-                    .header("User-Agent", "Mozilla/5.0")
-                    .timeout(Duration.ofSeconds(10))
+                    .uri(URI.create("https://www.geeksforgeeks.org/user/" + username + "/"))
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                    .timeout(Duration.ofSeconds(12))
                     .GET().build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = scrapeClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 String body = response.body();
-                result.put("totalSolved", parseIntSafe(extractJsonStringVal(body, "totalProblemsSolved")));
-                result.put("easySolved", parseIntSafe(extractJsonStringVal(body, "Easy")));
-                result.put("mediumSolved", parseIntSafe(extractJsonStringVal(body, "Medium")));
-                result.put("hardSolved", parseIntSafe(extractJsonStringVal(body, "Hard")));
-                result.put("score", parseIntSafe(extractJsonStringVal(body, "codingScore")));
-                result.put("streak", parseIntSafe(extractJsonStringVal(body, "currentStreak")));
-                result.put("maxStreak", parseIntSafe(extractJsonStringVal(body, "maxStreak")));
-                result.put("instituteRank", extractJsonStringVal(body, "instituteRank"));
-            } else {
-                result.put("error", "GFG API returned " + response.statusCode());
+
+                // Try multiple patterns for totalProblemsSolved
+                String[] patterns = {
+                    "\"totalProblemsSolved\"\\s*:\\s*\"?(\\d+)\"?",
+                    "\"problemsSolved\"\\s*:\\s*\"?(\\d+)\"?",
+                    "solvedProblems[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)",
+                    "(?:Total\\s+Problems?\\s+Solved|Problems?\\s+Solved)\\D*(\\d+)"
+                };
+                for (String pat : patterns) {
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile(pat, java.util.regex.Pattern.CASE_INSENSITIVE).matcher(body);
+                    if (m.find()) {
+                        result.put("totalSolved", Integer.parseInt(m.group(1)));
+                        gotData = true;
+                        break;
+                    }
+                }
+
+                // Difficulty breakdown
+                if (gotData) {
+                    java.util.regex.Matcher em = java.util.regex.Pattern.compile("(?:\"EASY\"|\"easy\"|\"Easy\")\\s*[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(body);
+                    if (em.find()) result.put("easySolved", Integer.parseInt(em.group(1)));
+                    java.util.regex.Matcher mm = java.util.regex.Pattern.compile("(?:\"MEDIUM\"|\"medium\"|\"Medium\")\\s*[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(body);
+                    if (mm.find()) result.put("mediumSolved", Integer.parseInt(mm.group(1)));
+                    java.util.regex.Matcher hm = java.util.regex.Pattern.compile("(?:\"HARD\"|\"hard\"|\"Hard\")\\s*[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(body);
+                    if (hm.find()) result.put("hardSolved", Integer.parseInt(hm.group(1)));
+
+                    // Coding score
+                    java.util.regex.Matcher cs = java.util.regex.Pattern.compile("(?:\"codingScore\"|codingScore)[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)").matcher(body);
+                    if (cs.find()) result.put("score", Integer.parseInt(cs.group(1)));
+
+                    // Streak
+                    java.util.regex.Matcher st = java.util.regex.Pattern.compile("(?:\"currentStreak\"|currentStreak)[\"']?\\s*[:\\s]+\\s*[\"']?(\\d+)").matcher(body);
+                    if (st.find()) result.put("streak", Integer.parseInt(st.group(1)));
+                }
+
+                logger.info("GFG scrape: got data for '{}', totalSolved={}", username, result.get("totalSolved"));
             }
         } catch (Exception e) {
-            logger.error("GFG analytics failed for '{}': {}", username, e.getMessage());
-            result.put("error", "GFG API unavailable");
+            logger.warn("GFG profile scrape failed for '{}': {}", username, e.getMessage());
+        }
+
+        // Approach 2: Community API (primary)
+        if (!gotData) {
+            try {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://geeks-for-geeks-stats-api.vercel.app/?userName=" + username))
+                        .header("User-Agent", "Mozilla/5.0")
+                        .timeout(Duration.ofSeconds(10))
+                        .GET().build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    String body = response.body();
+                    int total = parseIntSafe(extractJsonStringVal(body, "totalProblemsSolved"));
+                    if (total > 0) {
+                        result.put("totalSolved", total);
+                        result.put("easySolved", parseIntSafe(extractJsonStringVal(body, "Easy")));
+                        result.put("mediumSolved", parseIntSafe(extractJsonStringVal(body, "Medium")));
+                        result.put("hardSolved", parseIntSafe(extractJsonStringVal(body, "Hard")));
+                        result.put("score", parseIntSafe(extractJsonStringVal(body, "codingScore")));
+                        result.put("streak", parseIntSafe(extractJsonStringVal(body, "currentStreak")));
+                        result.put("maxStreak", parseIntSafe(extractJsonStringVal(body, "maxStreak")));
+                        result.put("instituteRank", extractJsonStringVal(body, "instituteRank"));
+                        gotData = true;
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("GFG community API failed for '{}': {}", username, e.getMessage());
+            }
+        }
+
+        // Approach 3: Alternative community API
+        if (!gotData) {
+            try {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://gfgstatsapi.onrender.com/api/" + username))
+                        .header("User-Agent", "Mozilla/5.0")
+                        .timeout(Duration.ofSeconds(10))
+                        .GET().build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    String body = response.body();
+                    int total = parseIntSafe(extractJsonStringVal(body, "totalProblemsSolved"));
+                    if (total > 0) {
+                        result.put("totalSolved", total);
+                        result.put("easySolved", parseIntSafe(extractJsonStringVal(body, "Easy")));
+                        result.put("mediumSolved", parseIntSafe(extractJsonStringVal(body, "Medium")));
+                        result.put("hardSolved", parseIntSafe(extractJsonStringVal(body, "Hard")));
+                        gotData = true;
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("GFG API 2 failed for '{}': {}", username, e.getMessage());
+            }
+        }
+
+        if (!gotData) {
+            result.put("isPrivate", true);
+            result.put("note", "GeeksForGeeks profile data is currently unavailable. The profile may be private or the APIs are temporarily down.");
         }
 
         return result;
@@ -420,13 +542,13 @@ public class PlatformAnalyticsService {
     private Map<String, Object> fetchInterviewBitAnalytics(String username) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("platform", "InterviewBit");
-        result.put("note", "InterviewBit does not expose a public API. Showing limited info.");
+        boolean gotData = false;
 
         // Try scraping the profile page
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://www.interviewbit.com/profile/" + username))
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                     .header("Accept", "text/html")
                     .timeout(Duration.ofSeconds(10))
                     .GET().build();
@@ -434,21 +556,23 @@ public class PlatformAnalyticsService {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 String body = response.body();
-                // Try to extract score
                 java.util.regex.Matcher sm = java.util.regex.Pattern
                         .compile("(?:score|Score)\\D*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
                         .matcher(body);
-                if (sm.find()) result.put("score", Integer.parseInt(sm.group(1)));
+                if (sm.find()) { result.put("score", Integer.parseInt(sm.group(1))); gotData = true; }
 
-                // Try to extract rank
                 java.util.regex.Matcher rm = java.util.regex.Pattern
                         .compile("(?:rank|Rank)\\D*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
                         .matcher(body);
-                if (rm.find()) result.put("rank", Integer.parseInt(rm.group(1)));
+                if (rm.find()) { result.put("rank", Integer.parseInt(rm.group(1))); gotData = true; }
             }
         } catch (Exception e) {
             logger.warn("InterviewBit scrape failed for '{}': {}", username, e.getMessage());
         }
+
+        // Always mark as private since InterviewBit has no public API
+        result.put("isPrivate", true);
+        result.put("note", "InterviewBit does not expose a public API. Profile data is limited.");
 
         return result;
     }

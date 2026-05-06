@@ -12,6 +12,7 @@ import CodeChefTab from "@/components/dashboard/analytics/CodeChefTab"
 import HackerRankTab from "@/components/dashboard/analytics/HackerRankTab"
 import GFGTab from "@/components/dashboard/analytics/GFGTab"
 import InterviewBitTab from "@/components/dashboard/analytics/InterviewBitTab"
+import PrivatePlatformCard from "@/components/dashboard/analytics/PrivatePlatformCard"
 
 // Guest mock analytics data
 const GUEST_ANALYTICS: Record<string, PlatformAnalytics> = {
@@ -169,12 +170,17 @@ export default function AnalyticsPage() {
     const data = analyticsData[activeTab]
     if (!data) return null
 
-    if (data.error) {
+    const activePlatform = platforms.find(p => p.platformName === activeTab)
+
+    // If the platform is marked private or has an error, show the polished private card
+    if (data.isPrivate || data.error) {
       return (
-        <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-300">
-          <AlertCircle className="h-8 w-8 text-amber-400 mb-3" />
-          <p className="text-amber-400 text-sm">{data.error}</p>
-        </div>
+        <PrivatePlatformCard
+          platformName={activeTab}
+          username={data.username || activePlatform?.username || ""}
+          note={data.note || data.error}
+          profileUrl={activePlatform?.profileUrl}
+        />
       )
     }
 

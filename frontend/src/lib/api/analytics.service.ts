@@ -6,6 +6,7 @@ export interface PlatformAnalytics {
   fetchedAt: string;
   error?: string;
   note?: string;
+  isPrivate?: boolean;
 
   // LeetCode
   easySolved?: number;
