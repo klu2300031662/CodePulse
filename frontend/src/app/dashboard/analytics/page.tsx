@@ -149,8 +149,8 @@ export default function AnalyticsPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full blur-xl opacity-20 animate-pulse" />
             <RefreshCw className="h-8 w-8 text-zinc-400 animate-spin relative" />
           </div>
-          <p className="text-zinc-500 text-sm mt-4">Fetching {activeTab} analytics...</p>
-          <p className="text-zinc-700 text-xs mt-1">This may take a few seconds</p>
+          <p className="text-zinc-600 dark:text-zinc-500 text-sm mt-4">Fetching {activeTab} analytics...</p>
+          <p className="text-zinc-400 dark:text-zinc-700 text-xs mt-1">This may take a few seconds</p>
         </div>
       )
     }
@@ -158,9 +158,9 @@ export default function AnalyticsPage() {
     if (error) {
       return (
         <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-300">
-          <AlertCircle className="h-8 w-8 text-red-400 mb-3" />
-          <p className="text-red-400 text-sm">{error}</p>
-          <button onClick={handleRefresh} className="mt-4 text-xs text-zinc-400 hover:text-white transition-colors underline underline-offset-2">
+          <AlertCircle className="h-8 w-8 text-red-500 dark:text-red-400 mb-3" />
+          <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
+          <button onClick={handleRefresh} className="mt-4 text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors underline underline-offset-2">
             Try again
           </button>
         </div>
@@ -200,11 +200,11 @@ export default function AnalyticsPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] animate-fade-in-up">
         <div className="relative mb-6">
           <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full blur-2xl opacity-10" />
-          <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700">
-            <Link2 className="h-10 w-10 text-zinc-600" />
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-gradient-to-br dark:from-zinc-800 dark:to-zinc-900 border border-zinc-200 dark:border-zinc-700">
+            <Link2 className="h-10 w-10 text-zinc-400 dark:text-zinc-600" />
           </div>
         </div>
-        <h3 className="text-xl font-bold text-zinc-200 mb-2">No Platforms Linked</h3>
+        <h3 className="text-xl font-bold text-zinc-800 dark:text-zinc-200 mb-2">No Platforms Linked</h3>
         <p className="text-zinc-500 text-sm text-center max-w-md">
           Link your coding platform profiles from the Dashboard to see detailed analytics here.
         </p>
@@ -217,7 +217,7 @@ export default function AnalyticsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent">
             Platform Analytics
           </h2>
           <p className="text-zinc-500 text-sm mt-1">Deep dive into your stats across each platform</p>
@@ -226,7 +226,7 @@ export default function AnalyticsPage() {
           <button
             onClick={handleRefresh}
             disabled={loading === activeTab}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 hover:border-zinc-600 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-zinc-800/50 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/50 hover:border-zinc-300 dark:hover:border-zinc-600 transition-all disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading === activeTab ? 'animate-spin' : ''}`} />
             Refresh
@@ -256,11 +256,10 @@ export default function AnalyticsPage() {
                 transition-all duration-300 cursor-pointer select-none
                 ${isActive
                   ? `bg-gradient-to-r ${config.activeGradient} text-white shadow-lg ${config.borderColor} border`
-                  : `bg-zinc-900/60 text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/60`
+                  : `bg-zinc-100 dark:bg-zinc-900/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-800/60`
                 }
               `}
             >
-              {/* Active indicator glow */}
               {isActive && (
                 <div className={`absolute inset-0 bg-gradient-to-r ${config.activeGradient} opacity-20 blur-xl rounded-xl`} />
               )}

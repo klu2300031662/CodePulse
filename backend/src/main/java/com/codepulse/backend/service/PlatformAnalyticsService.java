@@ -284,6 +284,13 @@ public class PlatformAnalyticsService {
                     gotData = true;
                 }
 
+                // Highest rating
+                java.util.regex.Matcher hrm = java.util.regex.Pattern
+                        .compile("(?:highest|Highest)\\s*(?:rating|Rating)[\\s\\S]*?(\\d{3,4})").matcher(body);
+                if (hrm.find()) {
+                    result.put("highestRating", Integer.parseInt(hrm.group(1)));
+                }
+
                 // Stars
                 java.util.regex.Matcher sm = java.util.regex.Pattern
                         .compile("(\\d)\\s*(?:★|star)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(body);
@@ -291,7 +298,22 @@ public class PlatformAnalyticsService {
                     result.put("stars", sm.group(1) + "★");
                 }
 
-                logger.info("CodeChef scrape: got data for '{}', totalSolved={}", username, result.get("totalSolved"));
+                // Global Rank
+                java.util.regex.Matcher grm = java.util.regex.Pattern
+                        .compile("(?:Global|global)\\s*(?:Rank|rank)[^\\d]*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(body);
+                if (grm.find()) {
+                    result.put("globalRank", Integer.parseInt(grm.group(1)));
+                }
+
+                // Country Rank
+                java.util.regex.Matcher crm = java.util.regex.Pattern
+                        .compile("(?:Country|country)\\s*(?:Rank|rank)[^\\d]*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(body);
+                if (crm.find()) {
+                    result.put("countryRank", Integer.parseInt(crm.group(1)));
+                }
+
+                logger.info("CodeChef scrape: got data for '{}', totalSolved={}, globalRank={}, countryRank={}",
+                        username, result.get("totalSolved"), result.get("globalRank"), result.get("countryRank"));
             }
         } catch (Exception e) {
             logger.warn("CodeChef profile scrape failed for '{}': {}", username, e.getMessage());
@@ -351,61 +373,8 @@ public class PlatformAnalyticsService {
     private Map<String, Object> fetchHackerRankAnalytics(String username) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("platform", "HackerRank");
-        result.put("note", "HackerRank does not expose a public API. Showing limited profile info.");
-
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://www.hackerrank.com/rest/hackers/" + username + "/scores_elo"))
-                    .header("User-Agent", "Mozilla/5.0")
-                    .timeout(Duration.ofSeconds(10))
-                    .GET().build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                String body = response.body();
-                // Parse skill scores from the JSON array
-                List<Map<String, Object>> skills = new ArrayList<>();
-                String[] parts = body.split("\"name\":");
-                for (int i = 1; i < parts.length; i++) {
-                    String part = parts[i];
-                    Map<String, Object> skill = new LinkedHashMap<>();
-                    int nameEnd = part.indexOf("\"", 1);
-                    if (nameEnd > 1) skill.put("name", part.substring(1, nameEnd));
-                    skill.put("score", extractInlineNumber(part, "score"));
-                    skills.add(skill);
-                }
-                result.put("skills", skills);
-            }
-        } catch (Exception e) {
-            logger.warn("HackerRank scores failed for '{}': {}", username, e.getMessage());
-        }
-
-        // Try to get badges
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://www.hackerrank.com/rest/hackers/" + username + "/badges"))
-                    .header("User-Agent", "Mozilla/5.0")
-                    .timeout(Duration.ofSeconds(10))
-                    .GET().build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                String body = response.body();
-                List<Map<String, Object>> badges = new ArrayList<>();
-                String[] parts = body.split("\"badge_name\":");
-                for (int i = 1; i < parts.length; i++) {
-                    String part = parts[i];
-                    Map<String, Object> badge = new LinkedHashMap<>();
-                    int nameEnd = part.indexOf("\"", 1);
-                    if (nameEnd > 1) badge.put("name", part.substring(1, nameEnd));
-                    badge.put("stars", extractInlineNumber(part, "stars"));
-                    badges.add(badge);
-                }
-                result.put("badges", badges);
-            }
-        } catch (Exception e) {
-            logger.warn("HackerRank badges failed for '{}': {}", username, e.getMessage());
-        }
+        result.put("isPrivate", true);
+        result.put("note", "HackerRank does not expose a public API. Profile data is limited.");
 
         return result;
     }
