@@ -5,7 +5,7 @@ import { useAuthStore } from "@/lib/store/auth.store"
 import { useDashboardStore } from "@/lib/store/dashboard.store"
 import TopBanner from "@/components/dashboard/TopBanner"
 import StatsCards from "@/components/dashboard/StatsCards"
-import StarredQuestions from "@/components/dashboard/StarredQuestions"
+import RecentlySolved from "@/components/dashboard/RecentlySolved"
 import TopicAnalysis from "@/components/dashboard/TopicAnalysis"
 import ContestList from "@/components/dashboard/ContestList"
 import PrepHub from "@/components/dashboard/PrepHub"
@@ -17,20 +17,20 @@ import { Code2 } from "lucide-react"
 
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user) as any
-  const { platforms, starredProblems, starredCount, loading, platformsLoaded, starredLoaded, fetchAll } = useDashboardStore()
-  const [initializing, setInitializing] = useState(!platformsLoaded || !starredLoaded)
+  const { platforms, platformsLoaded, fetchPlatforms } = useDashboardStore()
+  const [initializing, setInitializing] = useState(!platformsLoaded)
 
   useEffect(() => {
     const init = async () => {
-      await fetchAll(user?.isGuest)
+      await fetchPlatforms(user?.isGuest)
       setInitializing(false)
     }
-    if (!platformsLoaded || !starredLoaded) {
+    if (!platformsLoaded) {
       init()
     } else {
       setInitializing(false)
     }
-  }, [user?.isGuest, platformsLoaded, starredLoaded, fetchAll])
+  }, [user?.isGuest, platformsLoaded, fetchPlatforms])
 
   if (initializing) {
     return (
@@ -85,12 +85,15 @@ export default function DashboardPage() {
 
       <TopBanner />
 
-      <StatsCards prefetchedPlatforms={platforms} prefetchedStarredCount={starredCount} />
+      <StatsCards prefetchedPlatforms={platforms} />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
         <div className="space-y-6 min-w-0">
-          <StarredQuestions prefetchedStarred={starredProblems} />
+          {/* Recently Solved — live from LeetCode */}
+          <RecentlySolved />
+
           <TopicAnalysis />
+
           <Achievements prefetchedPlatforms={platforms} />
         </div>
 
