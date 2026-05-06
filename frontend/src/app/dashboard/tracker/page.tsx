@@ -16,11 +16,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/select"
 import { ProblemService, Problem } from "@/lib/api/problem.service"
+import { useDashboardStore } from "@/lib/store/dashboard.store"
+import { useAuthStore } from "@/lib/store/auth.store"
 import { Search, Plus, Trash2, Pencil, Download } from "lucide-react"
 import { prepInstaProblems } from "@/lib/data/prepinsta"
 
 export default function TrackerPage() {
-  const [problems, setProblems] = useState<Problem[]>([])
+  const user = useAuthStore((state) => state.user) as any
+  const { problems: cachedProblems, fetchProblems, invalidateProblems } = useDashboardStore()
+  const [problems, setProblems] = useState<Problem[]>(cachedProblems)
   const [searchQuery, setSearchQuery] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProblem, setEditingProblem] = useState<Problem | null>(null)
@@ -37,16 +41,18 @@ export default function TrackerPage() {
   })
 
   useEffect(() => {
-    loadProblems()
-  }, [])
+    fetchProblems(user?.isGuest)
+  }, [user?.isGuest, fetchProblems])
+
+  // Sync from cache
+  useEffect(() => {
+    setProblems(cachedProblems)
+  }, [cachedProblems])
 
   const loadProblems = async () => {
-    try {
-      const data = await ProblemService.getAll()
-      setProblems(data)
-    } catch (err) {
-      console.error("Failed to load problems", err)
-    }
+    invalidateProblems()
+    const data = await fetchProblems(user?.isGuest)
+    setProblems(data)
   }
 
   const handleSave = async (e: React.FormEvent) => {

@@ -5,10 +5,13 @@ import { PlatformChart } from "@/components/dashboard/platform-chart"
 import { ActivityHeatmap } from "@/components/dashboard/heatmap"
 import { Sparkles } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell, BarChart, Bar } from "recharts"
-import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
+import { PlatformLink } from "@/lib/api/platform.service"
+import { useDashboardStore } from "@/lib/store/dashboard.store"
+import { useAuthStore } from "@/lib/store/auth.store"
 
 export default function AnalyticsPage() {
-  const [platforms, setPlatforms] = useState<PlatformLink[]>([])
+  const user = useAuthStore((state) => state.user) as any
+  const { platforms, fetchPlatforms, platformsLoaded } = useDashboardStore()
   const [difficultyData, setDifficultyData] = useState([
     { name: "Easy", value: 0, color: "#10b981" },
     { name: "Medium", value: 0, color: "#f59e0b" },
@@ -17,10 +20,14 @@ export default function AnalyticsPage() {
   const [problemsSolvedData, setProblemsSolvedData] = useState<{month: string, solved: number}[]>([])
   
   useEffect(() => {
-    PlatformService.getUserPlatforms().then(data => {
-      setPlatforms(data);
+    // Use cached data, fetch only if not loaded yet
+    fetchPlatforms(user?.isGuest)
+  }, [user?.isGuest, fetchPlatforms])
+
+  useEffect(() => {
+    if (platforms.length > 0) {
       let easy = 0, medium = 0, hard = 0, total = 0;
-      data.forEach(p => {
+      platforms.forEach(p => {
         easy += p.easySolved;
         medium += p.mediumSolved;
         hard += p.hardSolved;
@@ -39,8 +46,8 @@ export default function AnalyticsPage() {
         { month: "May", solved: total > 0 ? Math.round(total * 0.9) : 0 },
         { month: "Jun", solved: total },
       ]);
-    }).catch(console.error);
-  }, []);
+    }
+  }, [platforms])
 
   const contestRatingData = platforms.length > 0 ? [
     { contest: "Contest 1", rating: 1200 },

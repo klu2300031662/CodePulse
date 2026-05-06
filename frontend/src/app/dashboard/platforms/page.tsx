@@ -9,10 +9,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
+import { useDashboardStore } from "@/lib/store/dashboard.store"
+import { useAuthStore } from "@/lib/store/auth.store"
 import { Link2, Unlink, RefreshCw, AlertCircle, Plus } from "lucide-react"
 
 export default function PlatformsPage() {
-  const [platforms, setPlatforms] = useState<PlatformLink[]>([])
+  const user = useAuthStore((state) => state.user) as any
+  const { platforms, fetchPlatforms, invalidatePlatforms } = useDashboardStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLinking, setIsLinking] = useState(false)
   const [error, setError] = useState("")
@@ -26,16 +29,12 @@ export default function PlatformsPage() {
   const SUPPORTED_PLATFORMS = ["LeetCode", "HackerRank", "Codeforces", "GeeksForGeeks"]
 
   useEffect(() => {
-    loadPlatforms()
-  }, [])
+    fetchPlatforms(user?.isGuest)
+  }, [user?.isGuest, fetchPlatforms])
 
   const loadPlatforms = async () => {
-    try {
-      const data = await PlatformService.getUserPlatforms()
-      setPlatforms(data)
-    } catch (err) {
-      console.error("Failed to load platforms", err)
-    }
+    invalidatePlatforms()
+    await fetchPlatforms(user?.isGuest)
   }
 
   const handleLink = async (e: React.FormEvent) => {

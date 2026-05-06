@@ -46,6 +46,9 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         // Clear both zustand persisted state AND the 'user' key used by axios interceptor
         localStorage.removeItem('user');
+        // Clear the dashboard data cache
+        const { invalidateAll } = require('@/lib/store/dashboard.store').useDashboardStore.getState();
+        invalidateAll();
         set({ user: null, isAuthenticated: false, isGuest: false });
       },
     }),

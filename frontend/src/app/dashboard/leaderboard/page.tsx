@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Trophy, Medal, Flame, Globe } from "lucide-react"
-import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
+import { PlatformLink } from "@/lib/api/platform.service"
+import { useDashboardStore } from "@/lib/store/dashboard.store"
+import { useAuthStore } from "@/lib/store/auth.store"
 
 interface PlatformRank {
   platform: string;
@@ -15,6 +17,8 @@ interface PlatformRank {
 }
 
 export default function LeaderboardPage() {
+  const user = useAuthStore((state) => state.user) as any
+  const { platforms, fetchPlatforms, platformsLoaded } = useDashboardStore()
   const [loading, setLoading] = useState(true)
   const [platformRanks, setPlatformRanks] = useState<PlatformRank[]>([])
   
@@ -28,50 +32,46 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     async function fetchRanks() {
-      try {
-        const platforms = await PlatformService.getUserPlatforms()
-        const ranksData: PlatformRank[] = []
+      // Use cached platforms (instant if already loaded)
+      const plats = await fetchPlatforms(user?.isGuest)
+      const ranksData: PlatformRank[] = []
+      
+      for (const p of plats) {
+        let globalRank: number | string = "N/A"
         
-        for (const p of platforms) {
-          let globalRank: number | string = "N/A"
-          
-          if (p.platformName.toLowerCase() === "leetcode") {
-            try {
-              const res = await fetch(`https://leetcode-stats-api.herokuapp.com/${p.username}`)
-              const data = await res.json()
-              if (data.status === "success" && data.ranking) {
-                globalRank = data.ranking
-              }
-            } catch (e) {}
-          } else {
-            // Mock rank for other platforms
-            globalRank = Math.floor(Math.random() * 100000) + 1000
-          }
-          
-          ranksData.push({
-            platform: p.platformName,
-            username: p.username,
-            rank: globalRank,
-            solved: p.totalSolved
-          })
+        if (p.platformName.toLowerCase() === "leetcode") {
+          try {
+            const res = await fetch(`https://leetcode-stats-api.herokuapp.com/${p.username}`)
+            const data = await res.json()
+            if (data.status === "success" && data.ranking) {
+              globalRank = data.ranking
+            }
+          } catch (e) {}
+        } else {
+          // Mock rank for other platforms
+          globalRank = Math.floor(Math.random() * 100000) + 1000
         }
         
-        // Sort by rank ascending
-        ranksData.sort((a, b) => {
-          const rankA = typeof a.rank === "number" ? a.rank : Infinity
-          const rankB = typeof b.rank === "number" ? b.rank : Infinity
-          return rankA - rankB
-        });
-        
-        setPlatformRanks(ranksData)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setLoading(false)
+        ranksData.push({
+          platform: p.platformName,
+          username: p.username,
+          rank: globalRank,
+          solved: p.totalSolved
+        })
       }
+      
+      // Sort by rank ascending
+      ranksData.sort((a, b) => {
+        const rankA = typeof a.rank === "number" ? a.rank : Infinity
+        const rankB = typeof b.rank === "number" ? b.rank : Infinity
+        return rankA - rankB
+      });
+      
+      setPlatformRanks(ranksData)
+      setLoading(false)
     }
     fetchRanks()
-  }, [])
+  }, [user?.isGuest, fetchPlatforms])
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAuthStore } from "@/lib/store/auth.store"
-import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
-import { ProblemService, Problem } from "@/lib/api/problem.service"
-import { GUEST_PLATFORMS, GUEST_STARRED_PROBLEMS, GUEST_STARRED_COUNT } from "@/lib/guest-data"
+import { useDashboardStore } from "@/lib/store/dashboard.store"
 import TopBanner from "@/components/dashboard/TopBanner"
 import StatsCards from "@/components/dashboard/StatsCards"
 import StarredQuestions from "@/components/dashboard/StarredQuestions"
@@ -17,51 +15,26 @@ import Achievements from "@/components/dashboard/Achievements"
 import GuestBanner from "@/components/dashboard/GuestBanner"
 import { Code2 } from "lucide-react"
 
-interface DashboardData {
-  platforms: PlatformLink[]
-  starredProblems: Problem[]
-  starredCount: number
-}
-
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user) as any
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { platforms, starredProblems, starredCount, loading, platformsLoaded, starredLoaded, fetchAll } = useDashboardStore()
+  const [initializing, setInitializing] = useState(!platformsLoaded || !starredLoaded)
 
-  // Prefetch all dashboard data in parallel
   useEffect(() => {
-    if (user?.isGuest) {
-      setData({
-        platforms: GUEST_PLATFORMS as any,
-        starredProblems: GUEST_STARRED_PROBLEMS as any,
-        starredCount: GUEST_STARRED_COUNT,
-      })
-      setLoading(false)
-      return
+    const init = async () => {
+      await fetchAll(user?.isGuest)
+      setInitializing(false)
     }
-
-    const fetchAll = async () => {
-      try {
-        const [platforms, starredProblems, starredCount] = await Promise.all([
-          PlatformService.getUserPlatforms().catch(() => []),
-          ProblemService.getStarred().catch(() => []),
-          ProblemService.getStarredCount().catch(() => 0),
-        ])
-        setData({ platforms, starredProblems, starredCount })
-      } catch {
-        setData({ platforms: [], starredProblems: [], starredCount: 0 })
-      } finally {
-        setLoading(false)
-      }
+    if (!platformsLoaded || !starredLoaded) {
+      init()
+    } else {
+      setInitializing(false)
     }
+  }, [user?.isGuest, platformsLoaded, starredLoaded, fetchAll])
 
-    fetchAll()
-  }, [user?.isGuest])
-
-  if (loading) {
+  if (initializing) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-        {/* Animated logo */}
         <div className="relative">
           <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shadow-xl shadow-violet-500/20 animate-pulse">
             <Code2 className="h-8 w-8 text-white" />
@@ -79,9 +52,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="w-48 h-1 rounded-full bg-zinc-200 dark:bg-white/[0.06] overflow-hidden">
-          <div
-            className="h-full w-1/3 rounded-full bg-gradient-to-r from-violet-500 to-blue-500 animate-shimmer"
-          />
+          <div className="h-full w-1/3 rounded-full bg-gradient-to-r from-violet-500 to-blue-500 animate-shimmer" />
         </div>
         <style jsx>{`
           @keyframes shimmer {
@@ -98,10 +69,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Guest Mode Banner */}
       {user?.isGuest && <GuestBanner />}
 
-      {/* Welcome header */}
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
           Welcome back{user?.name ? `, ${user.name.split(" ")[0]}` : ""} 👋
@@ -114,38 +83,21 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Top Banner */}
       <TopBanner />
 
-      {/* Stats Cards — pass prefetched data */}
-      <StatsCards prefetchedPlatforms={data?.platforms} prefetchedStarredCount={data?.starredCount} />
+      <StatsCards prefetchedPlatforms={platforms} prefetchedStarredCount={starredCount} />
 
-      {/* Main Grid: Center (70%) + Right Panel (30%) */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
-        {/* Center Column */}
         <div className="space-y-6 min-w-0">
-          {/* Starred Questions — pass prefetched data */}
-          <StarredQuestions prefetchedStarred={data?.starredProblems} />
-
-          {/* Topic Analysis */}
+          <StarredQuestions prefetchedStarred={starredProblems} />
           <TopicAnalysis />
-
-          {/* Achievements — pass prefetched platforms */}
-          <Achievements prefetchedPlatforms={data?.platforms} />
+          <Achievements prefetchedPlatforms={platforms} />
         </div>
 
-        {/* Right Panel */}
         <div className="space-y-6">
-          {/* Upcoming Contests */}
           <ContestList />
-
-          {/* Interview Prep Hub */}
           <PrepHub />
-
-          {/* Linked Platforms */}
-          <LinkedPlatforms prefetchedPlatforms={data?.platforms} />
-
-          {/* Company Prep (Future) */}
+          <LinkedPlatforms prefetchedPlatforms={platforms} />
           <CompanyPrep />
         </div>
       </div>

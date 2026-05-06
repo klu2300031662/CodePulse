@@ -4,7 +4,9 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Calendar, Clock, ExternalLink } from "lucide-react"
-import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
+import { PlatformLink } from "@/lib/api/platform.service"
+import { useDashboardStore } from "@/lib/store/dashboard.store"
+import { useAuthStore } from "@/lib/store/auth.store"
 
 const upcomingContests = [
   { id: 1, name: "Weekly Contest 405", platform: "LeetCode", date: "2026-04-15T18:00:00Z", link: "https://leetcode.com/contest/" },
@@ -17,17 +19,13 @@ const upcomingContests = [
 ]
 
 export default function ContestsPage() {
-  const [platforms, setPlatforms] = useState<PlatformLink[]>([])
-  const [loading, setLoading] = useState(true)
+  const user = useAuthStore((state) => state.user) as any
+  const { platforms, fetchPlatforms, platformsLoaded } = useDashboardStore()
+  const loading = !platformsLoaded
 
   useEffect(() => {
-    PlatformService.getUserPlatforms()
-      .then(data => {
-        setPlatforms(data)
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+    fetchPlatforms(user?.isGuest)
+  }, [user?.isGuest, fetchPlatforms])
 
   const linkedPlatformNames = platforms.map(p => p.platformName)
   const filteredContests = upcomingContests.filter(c => linkedPlatformNames.includes(c.platform)).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
