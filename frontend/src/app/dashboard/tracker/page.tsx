@@ -18,12 +18,12 @@ import {
 import { ProblemService, Problem } from "@/lib/api/problem.service"
 import { useDashboardStore } from "@/lib/store/dashboard.store"
 import { useAuthStore } from "@/lib/store/auth.store"
-import { Search, Plus, Trash2, Pencil, Download } from "lucide-react"
+import { Search, Plus, Trash2, Pencil, Download, Star } from "lucide-react"
 import { prepInstaProblems } from "@/lib/data/prepinsta"
 
 export default function TrackerPage() {
   const user = useAuthStore((state) => state.user) as any
-  const { problems: cachedProblems, fetchProblems, invalidateProblems } = useDashboardStore()
+  const { problems: cachedProblems, fetchProblems, invalidateProblems, invalidateAll } = useDashboardStore()
   const [problems, setProblems] = useState<Problem[]>(cachedProblems)
   const [searchQuery, setSearchQuery] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -53,6 +53,19 @@ export default function TrackerPage() {
     invalidateProblems()
     const data = await fetchProblems(user?.isGuest)
     setProblems(data)
+  }
+
+  const handleToggleStar = async (problem: Problem) => {
+    if (!problem.id) return
+    try {
+      const updated = await ProblemService.toggleStar(problem.id)
+      // Update local state immediately
+      setProblems(prev => prev.map(p => p.id === problem.id ? { ...p, starred: updated.starred } : p))
+      // Invalidate caches so dashboard picks up the change instantly
+      invalidateAll()
+    } catch (err) {
+      console.error("Failed to toggle star", err)
+    }
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -302,7 +315,16 @@ export default function TrackerPage() {
                     {problem.dateSolved ? format(new Date(problem.dateSolved), 'MMM d, yyyy') : '-'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleToggleStar(problem)}
+                        className={problem.starred ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30" : "text-zinc-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"}
+                        title={problem.starred ? "Unstar" : "Star"}
+                      >
+                        <Star className={`h-4 w-4 ${problem.starred ? 'fill-current' : ''}`} />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEditModal(problem)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
