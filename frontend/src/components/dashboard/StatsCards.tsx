@@ -73,14 +73,21 @@ function StatCard({ icon, label, value, gradient, glowColor, delay }: StatCardPr
   )
 }
 
-export default function StatsCards() {
-  const [platforms, setPlatforms] = useState<PlatformLink[]>([])
-  const [starredCount, setStarredCount] = useState(0)
+interface StatsCardsProps {
+  prefetchedPlatforms?: PlatformLink[]
+  prefetchedStarredCount?: number
+}
+
+export default function StatsCards({ prefetchedPlatforms, prefetchedStarredCount }: StatsCardsProps) {
+  const [platforms, setPlatforms] = useState<PlatformLink[]>(prefetchedPlatforms || [])
+  const [starredCount, setStarredCount] = useState(prefetchedStarredCount ?? 0)
   const user = useAuthStore((state) => state.user) as any
 
   useEffect(() => {
+    // Skip fetch if prefetched data was provided
+    if (prefetchedPlatforms) return
+
     if (user?.isGuest) {
-      // Use mock data for guest mode — no API calls
       setPlatforms(GUEST_PLATFORMS as any)
       setStarredCount(GUEST_STARRED_COUNT)
       return
@@ -92,7 +99,16 @@ export default function StatsCards() {
     ProblemService.getStarredCount()
       .then((count) => setStarredCount(count))
       .catch((err) => console.error(err))
-  }, [user?.isGuest])
+  }, [user?.isGuest, prefetchedPlatforms])
+
+  // Sync from prefetched when it arrives
+  useEffect(() => {
+    if (prefetchedPlatforms) setPlatforms(prefetchedPlatforms)
+  }, [prefetchedPlatforms])
+
+  useEffect(() => {
+    if (prefetchedStarredCount !== undefined) setStarredCount(prefetchedStarredCount)
+  }, [prefetchedStarredCount])
 
   const totalQuestions = platforms.reduce((sum, p) => sum + (p.totalSolved || 0), 0)
 

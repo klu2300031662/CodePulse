@@ -76,12 +76,19 @@ const platformIcons: Record<string, string> = {
 
 const allPlatformNames = ["LeetCode", "CodeChef", "Codeforces", "HackerRank", "GeeksforGeeks", "InterviewBit"]
 
-export default function Achievements() {
-  const [platforms, setPlatforms] = useState<PlatformLink[]>([])
-  const [loading, setLoading] = useState(true)
+interface AchievementsProps {
+  prefetchedPlatforms?: PlatformLink[]
+}
+
+export default function Achievements({ prefetchedPlatforms }: AchievementsProps) {
+  const [platforms, setPlatforms] = useState<PlatformLink[]>(prefetchedPlatforms || [])
+  const [loading, setLoading] = useState(!prefetchedPlatforms)
   const user = useAuthStore((state) => state.user) as any
 
   useEffect(() => {
+    // Skip fetch if prefetched data was provided
+    if (prefetchedPlatforms) return
+
     if (user?.isGuest) {
       setPlatforms(GUEST_PLATFORMS as any)
       setLoading(false)
@@ -91,7 +98,15 @@ export default function Achievements() {
       .then((res) => setPlatforms(res))
       .catch((err) => console.error(err))
       .finally(() => setLoading(false))
-  }, [user?.isGuest])
+  }, [user?.isGuest, prefetchedPlatforms])
+
+  // Sync from prefetched when it arrives
+  useEffect(() => {
+    if (prefetchedPlatforms) {
+      setPlatforms(prefetchedPlatforms)
+      setLoading(false)
+    }
+  }, [prefetchedPlatforms])
 
   const linkedMap = new Map<string, PlatformLink>()
   platforms.forEach(p => linkedMap.set(p.platformName, p))

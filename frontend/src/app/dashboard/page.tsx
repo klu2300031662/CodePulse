@@ -1,6 +1,10 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useAuthStore } from "@/lib/store/auth.store"
+import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
+import { ProblemService, Problem } from "@/lib/api/problem.service"
+import { GUEST_PLATFORMS, GUEST_STARRED_PROBLEMS, GUEST_STARRED_COUNT } from "@/lib/guest-data"
 import TopBanner from "@/components/dashboard/TopBanner"
 import StatsCards from "@/components/dashboard/StatsCards"
 import StarredQuestions from "@/components/dashboard/StarredQuestions"
@@ -11,9 +15,86 @@ import CompanyPrep from "@/components/dashboard/CompanyPrep"
 import LinkedPlatforms from "@/components/dashboard/LinkedPlatforms"
 import Achievements from "@/components/dashboard/Achievements"
 import GuestBanner from "@/components/dashboard/GuestBanner"
+import { Code2 } from "lucide-react"
+
+interface DashboardData {
+  platforms: PlatformLink[]
+  starredProblems: Problem[]
+  starredCount: number
+}
 
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user) as any
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Prefetch all dashboard data in parallel
+  useEffect(() => {
+    if (user?.isGuest) {
+      setData({
+        platforms: GUEST_PLATFORMS as any,
+        starredProblems: GUEST_STARRED_PROBLEMS as any,
+        starredCount: GUEST_STARRED_COUNT,
+      })
+      setLoading(false)
+      return
+    }
+
+    const fetchAll = async () => {
+      try {
+        const [platforms, starredProblems, starredCount] = await Promise.all([
+          PlatformService.getUserPlatforms().catch(() => []),
+          ProblemService.getStarred().catch(() => []),
+          ProblemService.getStarredCount().catch(() => 0),
+        ])
+        setData({ platforms, starredProblems, starredCount })
+      } catch {
+        setData({ platforms: [], starredProblems: [], starredCount: 0 })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAll()
+  }, [user?.isGuest])
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+        {/* Animated logo */}
+        <div className="relative">
+          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shadow-xl shadow-violet-500/20 animate-pulse">
+            <Code2 className="h-8 w-8 text-white" />
+          </div>
+          <div className="absolute inset-[-8px] rounded-3xl border-2 border-violet-500/20 animate-spin" style={{ animationDuration: '3s' }}>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-violet-500" />
+          </div>
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-200 tracking-tight">
+            Just a moment...
+          </h2>
+          <p className="text-sm text-zinc-400 dark:text-zinc-500">
+            Loading your dashboard
+          </p>
+        </div>
+        <div className="w-48 h-1 rounded-full bg-zinc-200 dark:bg-white/[0.06] overflow-hidden">
+          <div
+            className="h-full w-1/3 rounded-full bg-gradient-to-r from-violet-500 to-blue-500 animate-shimmer"
+          />
+        </div>
+        <style jsx>{`
+          @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
+          }
+          .animate-shimmer {
+            animation: shimmer 1.5s ease-in-out infinite;
+          }
+        `}</style>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -36,21 +117,21 @@ export default function DashboardPage() {
       {/* Top Banner */}
       <TopBanner />
 
-      {/* Stats Cards */}
-      <StatsCards />
+      {/* Stats Cards — pass prefetched data */}
+      <StatsCards prefetchedPlatforms={data?.platforms} prefetchedStarredCount={data?.starredCount} />
 
       {/* Main Grid: Center (70%) + Right Panel (30%) */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
         {/* Center Column */}
         <div className="space-y-6 min-w-0">
-          {/* Starred Questions */}
-          <StarredQuestions />
+          {/* Starred Questions — pass prefetched data */}
+          <StarredQuestions prefetchedStarred={data?.starredProblems} />
 
           {/* Topic Analysis */}
           <TopicAnalysis />
 
-          {/* Achievements */}
-          <Achievements />
+          {/* Achievements — pass prefetched platforms */}
+          <Achievements prefetchedPlatforms={data?.platforms} />
         </div>
 
         {/* Right Panel */}

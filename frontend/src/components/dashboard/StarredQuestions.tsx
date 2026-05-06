@@ -24,12 +24,19 @@ const difficultyColors: Record<string, string> = {
   Hard: "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20",
 }
 
-export default function StarredQuestions() {
-  const [starred, setStarred] = useState<Problem[]>([])
-  const [loading, setLoading] = useState(true)
+interface StarredQuestionsProps {
+  prefetchedStarred?: Problem[]
+}
+
+export default function StarredQuestions({ prefetchedStarred }: StarredQuestionsProps) {
+  const [starred, setStarred] = useState<Problem[]>(prefetchedStarred || [])
+  const [loading, setLoading] = useState(!prefetchedStarred)
   const user = useAuthStore((state) => state.user) as any
 
   useEffect(() => {
+    // Skip fetch if prefetched data was provided
+    if (prefetchedStarred) return
+
     if (user?.isGuest) {
       setStarred(GUEST_STARRED_PROBLEMS as any)
       setLoading(false)
@@ -39,7 +46,15 @@ export default function StarredQuestions() {
       .then((res) => setStarred(res))
       .catch((err) => console.error(err))
       .finally(() => setLoading(false))
-  }, [user?.isGuest])
+  }, [user?.isGuest, prefetchedStarred])
+
+  // Sync from prefetched when it arrives
+  useEffect(() => {
+    if (prefetchedStarred) {
+      setStarred(prefetchedStarred)
+      setLoading(false)
+    }
+  }, [prefetchedStarred])
 
   const handleUnstar = async (id: number) => {
     if (user?.isGuest) return
