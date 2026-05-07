@@ -8,6 +8,7 @@ import { useDashboardStore } from "@/lib/store/dashboard.store"
 import { useAuthStore } from "@/lib/store/auth.store"
 import { AnalyticsService, PlatformAnalytics } from "@/lib/api/analytics.service"
 import { Button } from "@/components/ui/button"
+import GuestGate from "@/components/dashboard/GuestGate"
 
 interface PlatformRank {
   platform: string
@@ -123,6 +124,7 @@ export default function LeaderboardPage() {
 
   // Fetch platforms + analytics data
   useEffect(() => {
+    if (user?.isGuest) { setLoading(false); return }
     async function loadData() {
       const plats = await fetchPlatforms(user?.isGuest)
 
@@ -182,6 +184,8 @@ export default function LeaderboardPage() {
         return ra - rb
       })
   }, [platforms, analyticsCache])
+
+  if (user?.isGuest) return <GuestGate />
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fade-in-up">

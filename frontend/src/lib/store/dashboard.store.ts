@@ -128,7 +128,7 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
     }
 
     if (isGuest) {
-      const data = GUEST_PLATFORMS as any;
+      const data: any[] = [];
       set({ platforms: data, platformsLoaded: true });
       return data;
     }

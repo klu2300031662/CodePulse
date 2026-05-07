@@ -7,6 +7,7 @@ import { useDashboardStore } from "@/lib/store/dashboard.store"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import GuestGate from "@/components/dashboard/GuestGate"
 
 const HIDDEN_PLATFORMS_KEY = "codepulse_hidden_platforms"
 
@@ -61,6 +62,8 @@ export default function SettingsPage() {
       setActiveSection(hash)
     }
   }, [])
+
+  if (user?.isGuest) return <GuestGate />
 
   const togglePlatformVisibility = (name: string) => {
     const updated = hiddenPlatforms.includes(name)

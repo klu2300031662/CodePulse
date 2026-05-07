@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useAuthStore } from "@/lib/store/auth.store"
+import GuestGate from "@/components/dashboard/GuestGate"
 
 // GitHub language colors
 const LANG_COLORS: Record<string, string> = {
@@ -40,6 +42,7 @@ const STORAGE_KEYS = {
 const REPOS_PER_PAGE = 20
 
 export default function ProjectsPage() {
+  const user = useAuthStore((s) => s.user) as any
   const [repos, setRepos] = useState<Repository[]>([])
   const [loading, setLoading] = useState(false)
   const [username, setUsername] = useState("")
@@ -189,6 +192,8 @@ export default function ProjectsPage() {
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
   }
+
+  if (user?.isGuest) return <GuestGate />
 
   return (
     <div className="space-y-6 animate-fade-in-up">

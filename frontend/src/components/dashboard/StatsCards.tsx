@@ -62,7 +62,7 @@ export default function StatsCards({ prefetchedPlatforms }: StatsCardsProps) {
     if (prefetchedPlatforms) return
 
     if (user?.isGuest) {
-      setPlatforms(GUEST_PLATFORMS as any)
+      setPlatforms([])
       return
     }
     fetchPlatforms(false).then((data) => setPlatforms(data))

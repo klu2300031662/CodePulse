@@ -5,6 +5,7 @@ import { useAuthStore } from "@/lib/store/auth.store"
 import { AnalyticsService, PlatformAnalytics } from "@/lib/api/analytics.service"
 import { PlatformLink } from "@/lib/api/platform.service"
 import { RefreshCw, Link2, AlertCircle, BarChart3 } from "lucide-react"
+import GuestGate from "@/components/dashboard/GuestGate"
 
 import LeetCodeTab from "@/components/dashboard/analytics/LeetCodeTab"
 import CodeforcesTab from "@/components/dashboard/analytics/CodeforcesTab"
@@ -189,6 +190,8 @@ export default function AnalyticsPage() {
       default:              return <p className="text-zinc-500 text-center py-10">Unsupported platform</p>
     }
   }
+
+  if (user?.isGuest) return <GuestGate />
 
   if (platforms.length === 0) {
     return (

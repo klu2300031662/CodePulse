@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { PlatformService, PlatformLink } from "@/lib/api/platform.service"
 import { useDashboardStore } from "@/lib/store/dashboard.store"
 import { useAuthStore } from "@/lib/store/auth.store"
+import GuestGate from "@/components/dashboard/GuestGate"
 import { Link2, Unlink, RefreshCw, AlertCircle, Plus, CheckCircle2, XCircle, Clock, Loader2, AlertTriangle, Lock, ShieldAlert } from "lucide-react"
 
 const NO_PUBLIC_API_PLATFORMS = ["HackerRank", "InterviewBit", "GeeksForGeeks"]
@@ -55,6 +56,8 @@ export default function PlatformsPage() {
   useEffect(() => {
     fetchPlatforms(user?.isGuest)
   }, [user?.isGuest, fetchPlatforms])
+
+  if (user?.isGuest) return <GuestGate />
 
   const loadPlatforms = async () => {
     invalidatePlatforms()

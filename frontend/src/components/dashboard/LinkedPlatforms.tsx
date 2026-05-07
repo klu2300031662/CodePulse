@@ -40,7 +40,7 @@ export default function LinkedPlatforms({ prefetchedPlatforms }: LinkedPlatforms
     if (prefetchedPlatforms) return
 
     if (user?.isGuest) {
-      setPlatforms(GUEST_PLATFORMS as any)
+      setPlatforms([])
       setLoading(false)
       return
     }
