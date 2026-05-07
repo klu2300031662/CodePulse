@@ -27,7 +27,22 @@ export async function POST(request: NextRequest) {
     const prompt = `Language: ${language}\n\nCode:\n\`\`\`${language}\n${code}\n\`\`\``;
 
     // ── Strategy: Try AI providers in order, fall back to heuristic ──────────
-    // 1. Try OpenAI (ChatGPT) if key is available
+
+    // 1. Try Groq (free, no credit card needed, fast)
+    const groqKey = process.env.GROQ_API_KEY;
+    if (groqKey) {
+      console.log('[Analyze] Trying Groq...');
+      const result = await tryGroq(groqKey, prompt);
+      if (result) {
+        console.log('[Analyze] Groq succeeded:', result.timeComplexity);
+        return NextResponse.json(result);
+      }
+      console.log('[Analyze] Groq failed, trying next provider...');
+    } else {
+      console.log('[Analyze] No GROQ_API_KEY found');
+    }
+
+    // 2. Try OpenAI (ChatGPT) if key is available
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
       console.log('[Analyze] Trying OpenAI...');
@@ -37,11 +52,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(result);
       }
       console.log('[Analyze] OpenAI failed, trying next provider...');
-    } else {
-      console.log('[Analyze] No OPENAI_API_KEY found');
     }
 
-    // 2. Try Gemini if key is available
+    // 3. Try Gemini if key is available
     const geminiKey = process.env.GEMINI_API_KEY;
     if (geminiKey) {
       console.log('[Analyze] Trying Gemini...');
@@ -51,16 +64,55 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(result);
       }
       console.log('[Analyze] Gemini failed, falling back to heuristic...');
-    } else {
-      console.log('[Analyze] No GEMINI_API_KEY found');
     }
 
-    // 3. Final fallback: improved heuristic analyzer
+    // 4. Final fallback: improved heuristic analyzer
+    console.log('[Analyze] Using heuristic fallback');
     return NextResponse.json(analyzeWithHeuristics(code, language));
   } catch (error) {
     console.error('Analysis error:', error);
     return NextResponse.json({ error: 'Analysis failed' }, { status: 500 });
   }
+}
+
+// ─── Groq Provider (Free, Fast, Llama models) ──────────────────────────────────
+async function tryGroq(apiKey: string, prompt: string) {
+  const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+  
+  for (const model of models) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.1,
+          max_tokens: 1024,
+        }),
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        console.error(`Groq API error (${model}):`, response.status, errBody);
+        continue;
+      }
+
+      const data = await response.json();
+      const text = data?.choices?.[0]?.message?.content || '';
+      const result = parseAIResponse(text, 'ai');
+      if (result) return result;
+    } catch (e) {
+      console.error(`Groq fetch error (${model}):`, e);
+    }
+  }
+  return null;
 }
 
 // ─── OpenAI (ChatGPT) Provider ─────────────────────────────────────────────────
