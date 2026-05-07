@@ -12,7 +12,8 @@ const SYSTEM_PROMPT = `You are an expert algorithm analyst. Analyze the given co
 Rules:
 - Be accurate for both trivial and advanced algorithms
 - Cover edge cases like recursion, memoization, amortized complexity
-- Identify common patterns (binary search, BFS/DFS, dynamic programming, divide-and-conquer, merge sort, quick sort, etc.)
+- Identify common patterns: binary search, BFS/DFS, dynamic programming, divide-and-conquer, merge sort, quick sort, heap sort, etc.
+- For recursive sorting (merge sort, quick sort): average case is O(N log N)
 - Only return valid JSON, no markdown, no code blocks`;
 
 export async function POST(request: NextRequest) {
@@ -23,83 +24,123 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Code is required' }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      // Fallback: use the built-in heuristic analyzer
-      return NextResponse.json(analyzeWithHeuristics(code, language));
-    }
-
-    // Call Gemini API with retry for rate limits
     const prompt = `Language: ${language}\n\nCode:\n\`\`\`${language}\n${code}\n\`\`\``;
 
-    let aiResponse = null;
-    for (let attempt = 0; attempt < 4; attempt++) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                { role: 'user', parts: [{ text: SYSTEM_PROMPT + '\n\n' + prompt }] }
-              ],
-              generationConfig: {
-                temperature: 0.1,
-                maxOutputTokens: 1024,
-              }
-            })
-          }
-        );
-
-        if (response.status === 429 && attempt < 3) {
-          const delay = (attempt + 1) * 3000; // 3s, 6s, 9s
-          console.log(`Gemini rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/4)`);
-          await new Promise(r => setTimeout(r, delay));
-          continue;
-        }
-
-        if (response.ok) {
-          aiResponse = await response.json();
-          break;
-        } else {
-          console.error('Gemini API error:', response.status);
-        }
-      } catch (e) {
-        console.error('Gemini fetch error:', e);
-      }
+    // ── Strategy: Try AI providers in order, fall back to heuristic ──────────
+    // 1. Try OpenAI (ChatGPT) if key is available
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (openaiKey) {
+      const result = await tryOpenAI(openaiKey, prompt);
+      if (result) return NextResponse.json(result);
     }
 
-    if (!aiResponse) {
-      return NextResponse.json(analyzeWithHeuristics(code, language));
+    // 2. Try Gemini if key is available
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (geminiKey) {
+      const result = await tryGemini(geminiKey, prompt);
+      if (result) return NextResponse.json(result);
     }
 
-    const data = aiResponse;
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    // Extract JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return NextResponse.json({
-          timeComplexity: parsed.timeComplexity || 'Unknown',
-          timeExplanation: parsed.timeExplanation || '',
-          spaceComplexity: parsed.spaceComplexity || 'Unknown',
-          spaceExplanation: parsed.spaceExplanation || '',
-          reasoning: parsed.reasoning || '',
-          source: 'ai'
-        });
-      } catch {
-        return NextResponse.json(analyzeWithHeuristics(code, language));
-      }
-    }
-
+    // 3. Final fallback: improved heuristic analyzer
     return NextResponse.json(analyzeWithHeuristics(code, language));
   } catch (error) {
     console.error('Analysis error:', error);
     return NextResponse.json({ error: 'Analysis failed' }, { status: 500 });
+  }
+}
+
+// ─── OpenAI (ChatGPT) Provider ─────────────────────────────────────────────────
+async function tryOpenAI(apiKey: string, prompt: string) {
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.1,
+        max_tokens: 1024,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const text = data?.choices?.[0]?.message?.content || '';
+    return parseAIResponse(text, 'ai');
+  } catch (e) {
+    console.error('OpenAI fetch error:', e);
+    return null;
+  }
+}
+
+// ─── Gemini Provider ────────────────────────────────────────────────────────────
+async function tryGemini(apiKey: string, prompt: string) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              { role: 'user', parts: [{ text: SYSTEM_PROMPT + '\n\n' + prompt }] }
+            ],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+          })
+        }
+      );
+
+      if (response.status === 429 && attempt < 2) {
+        const delay = (attempt + 1) * 3000;
+        console.log(`Gemini rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/3)`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+
+      if (!response.ok) {
+        console.error('Gemini API error:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      return parseAIResponse(text, 'ai');
+    } catch (e) {
+      console.error('Gemini fetch error:', e);
+      return null;
+    }
+  }
+  return null;
+}
+
+// ─── Parse AI JSON response ─────────────────────────────────────────────────────
+function parseAIResponse(text: string, source: 'ai' | 'heuristic') {
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return null;
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.timeComplexity) return null;
+    return {
+      timeComplexity: parsed.timeComplexity,
+      timeExplanation: parsed.timeExplanation || '',
+      spaceComplexity: parsed.spaceComplexity || 'Unknown',
+      spaceExplanation: parsed.spaceExplanation || '',
+      reasoning: parsed.reasoning || '',
+      source,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -121,6 +162,8 @@ function analyzeWithHeuristics(code: string, language: string) {
     /=\s*\{\s*\}/.test(code) || lower.includes('new map') || lower.includes('new set') ||
     lower.includes('defaultdict') || lower.includes('counter(') ||
     /\w+\s*=\s*\[.*\]/.test(code) || lower.includes('new array') || lower.includes('= []');
+  const hasHeap = lower.includes('priorityqueue') || lower.includes('heapq') || lower.includes('heap') ||
+    lower.includes('priority_queue');
 
   // ── Recursion & Divide-and-Conquer Detection ─────────────────────────────────
   const { hasDivideAndConquer, hasSimpleRecursion, hasTreeRecursion, recursionInfo } =
@@ -138,7 +181,7 @@ function analyzeWithHeuristics(code: string, language: string) {
     timeExplanation = 'Backtracking pattern detected — exponential branching.';
   } else if (hasDivideAndConquer) {
     timeComplexity = 'O(N log N)';
-    timeExplanation = `Divide-and-conquer recursion detected${recursionInfo ? ` (${recursionInfo})` : ''} — splits input and merges results.`;
+    timeExplanation = `Divide-and-conquer recursion detected${recursionInfo ? ` (${recursionInfo})` : ''} — splits input and processes sub-problems.`;
   } else if (hasTreeRecursion && !hasDP) {
     timeComplexity = 'O(2^N)';
     timeExplanation = 'Binary tree recursion without memoization — exponential growth.';
@@ -151,9 +194,9 @@ function analyzeWithHeuristics(code: string, language: string) {
   } else if (maxNest === 2) {
     timeComplexity = 'O(N²)';
     timeExplanation = 'Two levels of nested loops detected.';
-  } else if (hasSort) {
+  } else if (hasSort || hasHeap) {
     timeComplexity = 'O(N log N)';
-    timeExplanation = 'Sorting operation detected as the dominant factor.';
+    timeExplanation = hasHeap ? 'Heap operations detected (N insertions × log N each).' : 'Sorting operation detected as the dominant factor.';
   } else if (hasBinarySearch) {
     timeComplexity = 'O(log N)';
     timeExplanation = 'Binary search pattern detected.';
@@ -195,6 +238,7 @@ function analyzeWithHeuristics(code: string, language: string) {
   if (hasDP) facts.push('dynamic programming pattern');
   if (hasBacktracking) facts.push('backtracking/exponential pattern');
   if (hasHash) facts.push('hash-based data structure');
+  if (hasHeap) facts.push('heap/priority queue');
   if (hasSimpleRecursion && !hasDivideAndConquer) facts.push('simple recursion');
   if (hasTreeRecursion && !hasDivideAndConquer) facts.push('tree recursion');
 
@@ -208,7 +252,7 @@ function analyzeWithHeuristics(code: string, language: string) {
 }
 
 // ─── Recursion Pattern Detector ────────────────────────────────────────────────
-function detectRecursionPatterns(code: string, lower: string, language: string) {
+function detectRecursionPatterns(code: string, lower: string, _language: string) {
   let hasDivideAndConquer = false;
   let hasSimpleRecursion = false;
   let hasTreeRecursion = false;
@@ -216,57 +260,93 @@ function detectRecursionPatterns(code: string, lower: string, language: string) 
 
   // Extract function names (handles Java, C, C++, JS, Python)
   const funcPatterns = [
-    /(?:static\s+)?(?:void|int|long|boolean|String|char|float|double|auto|var)\s+(\w+)\s*\(/g,      // Java/C/C++
-    /(?:public|private|protected)\s+(?:static\s+)?(?:void|int|long|boolean|String|char)\s+(\w+)\s*\(/g, // Java with access modifier
-    /function\s+(\w+)\s*\(/g,                          // JavaScript
-    /(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?\(/g,  // JS arrow/anonymous
-    /def\s+(\w+)\s*\(/g,                                // Python
+    /(?:static\s+)?(?:void|int|long|boolean|String|char|float|double|auto|var)\s+(\w+)\s*\(/g,
+    /(?:public|private|protected)\s+(?:static\s+)?(?:void|int|long|boolean|String|char)\s+(\w+)\s*\(/g,
+    /function\s+(\w+)\s*\(/g,
+    /(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?\(/g,
+    /def\s+(\w+)\s*\(/g,
   ];
 
+  const reserved = new Set(['main', 'if', 'while', 'for', 'switch', 'catch', 'return', 'print', 'println', 'printf', 'log']);
   const functionNamesSet = new Set<string>();
   for (const pattern of funcPatterns) {
     let m;
     while ((m = pattern.exec(code)) !== null) {
-      if (m[1] && m[1] !== 'main' && m[1] !== 'if' && m[1] !== 'while' && m[1] !== 'for') {
+      if (m[1] && !reserved.has(m[1])) {
         functionNamesSet.add(m[1]);
       }
     }
   }
-
   const functionNames = Array.from(functionNamesSet);
+
+  // Global indicators for divide-and-conquer patterns
+  const hasMidpoint = lower.includes('/2') || lower.includes('>> 1') ||
+    lower.includes('/ 2') || /\bmid\b/.test(lower) || /\bhalf\b/.test(lower);
+
+  const hasPartition = lower.includes('partition') || lower.includes('pivot') ||
+    lower.includes('lomuto') || lower.includes('hoare');
+
+  const hasSwapAndCompare = (lower.includes('swap') || /\btemp\b/.test(lower)) &&
+    (lower.includes('arr[') || lower.includes('arr (') || lower.includes('nums['));
 
   // Check each function for recursive calls
   for (const fname of functionNames) {
     const callRegex = new RegExp(`\\b${fname}\\s*\\(`, 'g');
     const allCalls = code.match(callRegex);
+    if (!allCalls || allCalls.length < 2) continue;
 
-    if (!allCalls || allCalls.length < 2) continue; // need at least def + 1 call
+    const recursiveCalls = allCalls.length - 1;
 
-    const recursiveCalls = allCalls.length - 1; // subtract the definition
+    const fnLower = fname.toLowerCase();
+    const isSortRelated = fnLower.includes('sort') || fnLower.includes('merge') ||
+      fnLower.includes('quick') || fnLower.includes('partition');
 
-    // Check for midpoint division (divide-and-conquer indicator)
-    const hasMidpoint = lower.includes('/2') || lower.includes('>> 1') ||
-      lower.includes('/ 2') || /\bmid\b/.test(lower) || /\bhalf\b/.test(lower);
+    const isDivideConquer = fnLower.includes('divide') || fnLower.includes('conquer') ||
+      fnLower.includes('binary') || fnLower.includes('split');
 
-    const isSortRelated = fname.toLowerCase().includes('sort') ||
-      fname.toLowerCase().includes('merge') ||
-      fname.toLowerCase().includes('quick') ||
-      fname.toLowerCase().includes('partition');
+    if (recursiveCalls >= 2) {
+      // Two+ recursive calls — check if it's divide-and-conquer or tree recursion
+      const isDnC = hasMidpoint || hasPartition || isSortRelated || isDivideConquer || hasSwapAndCompare;
 
-    if (recursiveCalls >= 2 && hasMidpoint) {
-      // Two recursive calls + midpoint = divide-and-conquer (merge sort, quick sort)
-      hasDivideAndConquer = true;
-      recursionInfo = isSortRelated ? `${fname} — recursive sorting` : `${fname} — divide-and-conquer`;
-    } else if (recursiveCalls >= 2) {
-      // Two recursive calls without midpoint = tree recursion (fibonacci-like)
-      hasTreeRecursion = true;
-    } else if (recursiveCalls === 1) {
-      if (hasMidpoint) {
-        // Single recursive call + midpoint = binary search style
-        // Don't override if already detected binary search via other patterns
-        hasSimpleRecursion = true;
+      if (isDnC) {
+        hasDivideAndConquer = true;
+        if (isSortRelated) {
+          recursionInfo = `${fname} — recursive sorting`;
+        } else {
+          recursionInfo = `${fname} — divide-and-conquer`;
+        }
       } else {
-        hasSimpleRecursion = true;
+        // Check if function parameters suggest array range splitting (e.g., low/high, l/r, start/end)
+        const funcDefRegex = new RegExp(`\\b${fname}\\s*\\([^)]*\\)`, 'g');
+        const funcDef = code.match(funcDefRegex);
+        const paramStr = funcDef?.[0] || '';
+        const paramLower = paramStr.toLowerCase();
+        const hasRangeParams = (paramLower.includes('low') && paramLower.includes('high')) ||
+          (paramLower.includes('left') && paramLower.includes('right')) ||
+          (paramLower.includes('start') && paramLower.includes('end')) ||
+          (/\bl\b/.test(paramLower) && /\br\b/.test(paramLower));
+
+        if (hasRangeParams) {
+          hasDivideAndConquer = true;
+          recursionInfo = `${fname} — range-splitting recursion`;
+        } else {
+          hasTreeRecursion = true;
+        }
+      }
+    } else if (recursiveCalls === 1) {
+      hasSimpleRecursion = true;
+    }
+  }
+
+  // Extra check: if any function is named with sort-related keywords AND there's recursion, it's likely O(N log N)
+  if (!hasDivideAndConquer && (hasSimpleRecursion || hasTreeRecursion)) {
+    for (const fname of functionNames) {
+      const fnLower = fname.toLowerCase();
+      if (fnLower.includes('sort') || fnLower.includes('merge') || fnLower.includes('quick')) {
+        hasDivideAndConquer = true;
+        hasTreeRecursion = false;
+        recursionInfo = `${fname} — recursive sorting algorithm`;
+        break;
       }
     }
   }
@@ -280,7 +360,6 @@ function countLoopNesting(lines: string[], language: string): number {
   const isPython = language?.toLowerCase() === 'python';
 
   if (isPython) {
-    // Python: track indentation to determine nesting
     const indentStack: number[] = [];
     for (const line of lines) {
       if (line.trim().length === 0) continue;
@@ -294,10 +373,9 @@ function countLoopNesting(lines: string[], language: string): number {
       }
     }
   } else {
-    // C-style languages: track brace depth and associate loops with brace levels
     let braceDepth = 0;
     let loopDepth = 0;
-    const loopBraceLevels: number[] = []; // brace depth at which each loop started
+    const loopBraceLevels: number[] = [];
 
     for (const line of lines) {
       const t = line.trim();
@@ -307,32 +385,26 @@ function countLoopNesting(lines: string[], language: string): number {
       const openBraces = (t.match(/{/g) || []).length;
       const closeBraces = (t.match(/}/g) || []).length;
 
-      // Handle closing braces first (for lines like "} else {")
       for (let i = 0; i < closeBraces; i++) {
         braceDepth--;
-        // If this closes a loop's brace level, decrease loop depth
         if (loopBraceLevels.length > 0 && braceDepth <= loopBraceLevels[loopBraceLevels.length - 1]) {
           loopBraceLevels.pop();
           loopDepth--;
         }
       }
 
-      // Handle loop detection
       if (isLoop) {
         if (openBraces > 0) {
-          // Multi-line loop with brace — track it
           loopDepth++;
           maxNest = Math.max(maxNest, loopDepth);
-          loopBraceLevels.push(braceDepth); // record current depth before opening
+          loopBraceLevels.push(braceDepth);
         } else {
-          // Single-line loop (no brace) — temporary nesting
           loopDepth++;
           maxNest = Math.max(maxNest, loopDepth);
-          loopDepth--; // immediately close
+          loopDepth--;
         }
       }
 
-      // Handle opening braces
       braceDepth += openBraces;
     }
   }
