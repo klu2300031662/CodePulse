@@ -64,9 +64,9 @@ const STALE_MS = 5 * 60 * 1000 // 5 min
 export default function ContestsPage() {
   const { contestsCache, setContestsCache, invalidateContests } = useDashboardStore()
 
-  // Initialize from cache instantly
+  // Always initialize from cache instantly — never show loading spinner
   const [contests, setContests] = useState<Contest[]>(contestsCache?.data || [])
-  const [loading, setLoading] = useState(!contestsCache)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [filter, setFilter] = useState<string>("all")
   const [lastFetched, setLastFetched] = useState<Date | null>(
@@ -92,6 +92,7 @@ export default function ContestsPage() {
     }
   }
 
+  // Always fetch silently in background — never block the UI
   useEffect(() => {
     if (hasFetched.current) return
     hasFetched.current = true
@@ -101,14 +102,17 @@ export default function ContestsPage() {
       return
     }
 
-    if (contestsCache) {
-      // Cache exists but is stale — show it instantly, refresh silently
-      fetchContests(true)
-    } else {
-      // No cache — show loader and fetch
-      fetchContests()
-    }
+    // Always fetch silently (data from cache shows instantly)
+    fetchContests(true)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync from store if cache updates (e.g. from dashboard pre-fetch)
+  useEffect(() => {
+    if (contestsCache?.data && contestsCache.data.length > 0 && contests.length === 0) {
+      setContests(contestsCache.data)
+      setLastFetched(new Date(contestsCache.fetchedAt))
+    }
+  }, [contestsCache]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get unique platforms from contests
   const allPlatforms = Array.from(new Set(contests.map(c => c.platform))).sort()

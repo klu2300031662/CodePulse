@@ -24,7 +24,8 @@ import { useAuthStore } from "@/lib/store/auth.store"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import ProfileDropdown from "@/components/dashboard/ProfileDropdown"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useDashboardStore } from "@/lib/store/dashboard.store"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -43,6 +44,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { contestsCache, setContestsCache } = useDashboardStore()
+
+  // Pre-fetch contests on layout mount so Contests tab is instant
+  useEffect(() => {
+    if (contestsCache && Date.now() - contestsCache.fetchedAt < 5 * 60 * 1000) return
+    fetch('/api/contests')
+      .then(r => r.json())
+      .then(d => { if (d.contests?.length) setContestsCache(d.contests) })
+      .catch(() => {})
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isActive = (item: (typeof navItems)[0]) => {
     if (item.exact) return pathname === item.href
