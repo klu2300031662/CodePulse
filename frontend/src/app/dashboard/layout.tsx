@@ -15,8 +15,6 @@ import {
   Building2,
   Sun,
   Moon,
-  Search,
-  Bell,
   Menu,
   X,
 } from "lucide-react"
@@ -24,6 +22,8 @@ import { useAuthStore } from "@/lib/store/auth.store"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import ProfileDropdown from "@/components/dashboard/ProfileDropdown"
+import GlobalSearch from "@/components/dashboard/GlobalSearch"
+import NotificationBell from "@/components/dashboard/NotificationBell"
 import { useState, useEffect } from "react"
 import { useDashboardStore } from "@/lib/store/dashboard.store"
 
@@ -123,9 +123,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Bottom */}
         <div className="border-t border-zinc-200 dark:border-white/[0.06] p-3">
           <Link
-            href="/settings"
+            href="/dashboard/settings"
             className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-500 border overflow-hidden relative ${
-              pathname?.startsWith("/settings")
+              pathname?.startsWith("/dashboard/settings")
                 ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white border-violet-300 dark:border-violet-500/30 shadow-lg shadow-violet-500/10"
                 : "border-transparent text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] hover:border-violet-300 dark:hover:border-violet-500/25 hover:shadow-lg hover:shadow-violet-500/10 hover:-translate-y-[2px]"
             }`}
@@ -220,22 +220,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Search */}
-            <button
-              id="header-search"
-              className="h-9 w-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-violet-600 dark:text-zinc-500 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] transition-all duration-200 hover:shadow-sm hover:scale-105"
-            >
-              <Search className="h-4 w-4" />
-            </button>
+            {/* Global Search */}
+            <GlobalSearch />
 
             {/* Notifications */}
-            <button
-              id="header-notifications"
-              className="relative h-9 w-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-violet-600 dark:text-zinc-500 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] transition-all duration-200 hover:shadow-sm hover:scale-105"
-            >
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-violet-500 ring-2 ring-white dark:ring-[#0a0a1f]" />
-            </button>
+            <NotificationBell />
 
             {/* Theme toggle */}
             <Button
