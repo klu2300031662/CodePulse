@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Calendar, Clock, ExternalLink, RefreshCw, Loader2, Trophy, Zap, Filter } from "lucide-react"
@@ -59,69 +59,45 @@ function timeUntil(timestamp: number): string {
   return `${minutes}m`
 }
 
-const STALE_MS = 5 * 60 * 1000 // 5 min
-
 export default function ContestsPage() {
-  const { contestsCache, setContestsCache, invalidateContests } = useDashboardStore()
+  // Read DIRECTLY from Zustand store — reactive, instant, persists across tab switches
+  const contestsCache = useDashboardStore((s) => s.contestsCache)
+  const setContestsCache = useDashboardStore((s) => s.setContestsCache)
 
-  // Always initialize from cache instantly — never show loading spinner
-  const [contests, setContests] = useState<Contest[]>(contestsCache?.data || [])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  // Derive contests from store — no local state copy
+  const contests: Contest[] = contestsCache?.data || []
+  const lastFetchedTime = contestsCache?.fetchedAt ? new Date(contestsCache.fetchedAt) : null
+
+  const [refreshing, setRefreshing] = useState(false)
   const [filter, setFilter] = useState<string>("all")
-  const [lastFetched, setLastFetched] = useState<Date | null>(
-    contestsCache ? new Date(contestsCache.fetchedAt) : null
-  )
-  const hasFetched = useRef(false)
+  const fetchedRef = useRef(false)
 
-  const fetchContests = async (silent = false) => {
-    if (!silent) setLoading(true)
-    setError("")
+  // Silently fetch if no cache or stale — NEVER block UI
+  useEffect(() => {
+    if (fetchedRef.current) return
+    fetchedRef.current = true
+    if (contestsCache && Date.now() - contestsCache.fetchedAt < 5 * 60 * 1000) return
+    fetch("/api/contests")
+      .then(r => r.json())
+      .then(d => { if (d.contests?.length) setContestsCache(d.contests) })
+      .catch(() => {})
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Manual refresh
+  const handleRefresh = async () => {
+    setRefreshing(true)
     try {
       const res = await fetch("/api/contests")
-      if (!res.ok) throw new Error("Failed to fetch contests")
+      if (!res.ok) throw new Error()
       const data = await res.json()
-      const list = data.contests || []
-      setContests(list)
-      setContestsCache(list)
-      setLastFetched(new Date())
-    } catch (err: any) {
-      if (!silent) setError(err.message || "Failed to load contests")
-    } finally {
-      setLoading(false)
+      if (data.contests?.length) setContestsCache(data.contests)
+    } catch {} finally {
+      setRefreshing(false)
     }
   }
 
-  // Always fetch silently in background — never block the UI
-  useEffect(() => {
-    if (hasFetched.current) return
-    hasFetched.current = true
-
-    if (contestsCache && Date.now() - contestsCache.fetchedAt < STALE_MS) {
-      // Cache is fresh — use it, don't re-fetch
-      return
-    }
-
-    // Always fetch silently (data from cache shows instantly)
-    fetchContests(true)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Sync from store if cache updates (e.g. from dashboard pre-fetch)
-  useEffect(() => {
-    if (contestsCache?.data && contestsCache.data.length > 0 && contests.length === 0) {
-      setContests(contestsCache.data)
-      setLastFetched(new Date(contestsCache.fetchedAt))
-    }
-  }, [contestsCache]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Get unique platforms from contests
   const allPlatforms = Array.from(new Set(contests.map(c => c.platform))).sort()
-
-  // Filter contests
-  const filteredContests = filter === "all"
-    ? contests
-    : contests.filter(c => c.platform === filter)
-
+  const filteredContests = filter === "all" ? contests : contests.filter(c => c.platform === filter)
   const ongoingCount = contests.filter(c => c.status === "ongoing").length
 
   return (
@@ -138,16 +114,16 @@ export default function ContestsPage() {
           </h2>
           <p className="text-muted-foreground">
             Real-time contest schedule from all major coding platforms.
-            {lastFetched && (
+            {lastFetchedTime && (
               <span className="ml-2 text-xs opacity-60">
-                Updated {lastFetched.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })} IST
+                Updated {lastFetchedTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })} IST
               </span>
             )}
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={() => fetchContests(false)} disabled={loading} className="gap-2">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-2">
+          {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Refresh
         </Button>
       </div>
@@ -212,28 +188,13 @@ export default function ContestsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center">
-                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Fetching live contest data...
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : error ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center">
-                      <div className="text-red-500 space-y-2">
-                        <p>{error}</p>
-                        <Button variant="outline" size="sm" onClick={fetchContests}>Retry</Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredContests.length === 0 ? (
+                {filteredContests.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                      No upcoming contests found{filter !== "all" ? ` for ${filter}` : ""}.
+                      {contests.length === 0
+                        ? "Loading contests in background..."
+                        : `No upcoming contests found${filter !== "all" ? ` for ${filter}` : ""}.`
+                      }
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -301,9 +262,9 @@ export default function ContestsPage() {
               </TableBody>
             </Table>
           </div>
-          {!loading && filteredContests.length > 0 && (
+          {filteredContests.length > 0 && (
             <p className="text-xs text-muted-foreground mt-3 text-center">
-              Showing {Math.min(filteredContests.length, 50)} of {filteredContests.length} contests • Data from kontests.net
+              Showing {Math.min(filteredContests.length, 50)} of {filteredContests.length} contests
             </p>
           )}
         </CardContent>
