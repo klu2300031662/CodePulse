@@ -30,15 +30,29 @@ export async function POST(request: NextRequest) {
     // 1. Try OpenAI (ChatGPT) if key is available
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
+      console.log('[Analyze] Trying OpenAI...');
       const result = await tryOpenAI(openaiKey, prompt);
-      if (result) return NextResponse.json(result);
+      if (result) {
+        console.log('[Analyze] OpenAI succeeded:', result.timeComplexity);
+        return NextResponse.json(result);
+      }
+      console.log('[Analyze] OpenAI failed, trying next provider...');
+    } else {
+      console.log('[Analyze] No OPENAI_API_KEY found');
     }
 
     // 2. Try Gemini if key is available
     const geminiKey = process.env.GEMINI_API_KEY;
     if (geminiKey) {
+      console.log('[Analyze] Trying Gemini...');
       const result = await tryGemini(geminiKey, prompt);
-      if (result) return NextResponse.json(result);
+      if (result) {
+        console.log('[Analyze] Gemini succeeded:', result.timeComplexity);
+        return NextResponse.json(result);
+      }
+      console.log('[Analyze] Gemini failed, falling back to heuristic...');
+    } else {
+      console.log('[Analyze] No GEMINI_API_KEY found');
     }
 
     // 3. Final fallback: improved heuristic analyzer
@@ -52,33 +66,45 @@ export async function POST(request: NextRequest) {
 // ─── OpenAI (ChatGPT) Provider ─────────────────────────────────────────────────
 async function tryOpenAI(apiKey: string, prompt: string) {
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.1,
-        max_tokens: 1024,
-      }),
-    });
+    // Try gpt-4o-mini first, then gpt-3.5-turbo as fallback
+    const models = ['gpt-4o-mini', 'gpt-3.5-turbo'];
+    
+    for (const model of models) {
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.1,
+            max_tokens: 1024,
+          }),
+        });
 
-    if (!response.ok) {
-      console.error('OpenAI API error:', response.status);
-      return null;
+        if (!response.ok) {
+          const errBody = await response.text();
+          console.error(`OpenAI API error (${model}):`, response.status, errBody);
+          continue; // try next model
+        }
+
+        const data = await response.json();
+        const text = data?.choices?.[0]?.message?.content || '';
+        const result = parseAIResponse(text, 'ai');
+        if (result) return result;
+      } catch (e) {
+        console.error(`OpenAI fetch error (${model}):`, e);
+      }
     }
-
-    const data = await response.json();
-    const text = data?.choices?.[0]?.message?.content || '';
-    return parseAIResponse(text, 'ai');
+    return null;
   } catch (e) {
-    console.error('OpenAI fetch error:', e);
+    console.error('OpenAI provider error:', e);
     return null;
   }
 }
@@ -109,7 +135,8 @@ async function tryGemini(apiKey: string, prompt: string) {
       }
 
       if (!response.ok) {
-        console.error('Gemini API error:', response.status);
+        const errBody = await response.text();
+        console.error('Gemini API error:', response.status, errBody);
         return null;
       }
 
