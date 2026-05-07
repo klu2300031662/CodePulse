@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { PlatformService, PlatformLink } from '@/lib/api/platform.service';
 import { ProblemService, Problem } from '@/lib/api/problem.service';
+import { PlatformAnalytics } from '@/lib/api/analytics.service';
 import { GUEST_PLATFORMS } from '@/lib/guest-data';
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -45,6 +46,7 @@ interface DashboardState {
   // Data
   platforms: PlatformLink[];
   problems: Problem[];
+  analyticsCache: Record<string, PlatformAnalytics>;
 
   // Loading states
   platformsLoaded: boolean;
@@ -60,6 +62,11 @@ interface DashboardState {
   invalidateProblems: () => void;
   invalidateAll: () => void;
 
+  // Analytics cache
+  setAnalyticsForPlatform: (platform: string, data: PlatformAnalytics) => void;
+  getAnalyticsForPlatform: (platform: string) => PlatformAnalytics | null;
+  clearAnalyticsForPlatform: (platform: string) => void;
+
   // Optimistic updates
   setPlatforms: (platforms: PlatformLink[]) => void;
   removePlatformOptimistic: (id: number) => void;
@@ -70,6 +77,7 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
   // Initialize from localStorage cache for instant render
   platforms: (typeof window !== 'undefined' ? loadFromStorage<PlatformLink[]>('platforms') : null) || [],
   problems: (typeof window !== 'undefined' ? loadFromStorage<Problem[]>('problems') : null) || [],
+  analyticsCache: (typeof window !== 'undefined' ? loadFromStorage<Record<string, PlatformAnalytics>>('analytics') : null) || {},
   platformsLoaded: false,
   problemsLoaded: false,
   loading: false,
@@ -224,5 +232,21 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
     const updated = [...get().platforms, platform];
     set({ platforms: updated });
     saveToStorage('platforms', updated);
+  },
+
+  // Analytics cache — persists across tab switches
+  setAnalyticsForPlatform: (platform: string, data: PlatformAnalytics) => {
+    const updated = { ...get().analyticsCache, [platform]: data };
+    set({ analyticsCache: updated });
+    saveToStorage('analytics', updated);
+  },
+  getAnalyticsForPlatform: (platform: string) => {
+    return get().analyticsCache[platform] || null;
+  },
+  clearAnalyticsForPlatform: (platform: string) => {
+    const updated = { ...get().analyticsCache };
+    delete updated[platform];
+    set({ analyticsCache: updated });
+    saveToStorage('analytics', updated);
   },
 }));

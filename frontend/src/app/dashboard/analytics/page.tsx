@@ -67,9 +67,8 @@ const PLATFORM_CONFIG: Record<string, {
 
 export default function AnalyticsPage() {
   const user = useAuthStore((state) => state.user) as any
-  const { platforms, fetchPlatforms } = useDashboardStore()
+  const { platforms, fetchPlatforms, analyticsCache, setAnalyticsForPlatform, clearAnalyticsForPlatform } = useDashboardStore()
   const [activeTab, setActiveTab] = useState<string>("")
-  const [analyticsData, setAnalyticsData] = useState<Record<string, PlatformAnalytics>>({})
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -88,25 +87,25 @@ export default function AnalyticsPage() {
     if (user?.isGuest) {
       const mock = GUEST_ANALYTICS[platform.platformName]
       if (mock) {
-        setAnalyticsData(prev => ({ ...prev, [platform.platformName]: mock }))
+        setAnalyticsForPlatform(platform.platformName, mock)
       }
       return
     }
 
-    // Check if already loaded
-    if (analyticsData[platform.platformName]) return
+    // Check if already cached in store
+    if (analyticsCache[platform.platformName]) return
 
     setLoading(platform.platformName)
     setError(null)
     try {
       const data = await AnalyticsService.getPlatformAnalytics(platform.id)
-      setAnalyticsData(prev => ({ ...prev, [platform.platformName]: data }))
+      setAnalyticsForPlatform(platform.platformName, data)
     } catch (err: any) {
       setError(err.message || "Failed to fetch analytics")
     } finally {
       setLoading(null)
     }
-  }, [user?.isGuest, analyticsData])
+  }, [user?.isGuest, analyticsCache, setAnalyticsForPlatform])
 
   // Fetch analytics when tab changes
   useEffect(() => {
@@ -123,17 +122,13 @@ export default function AnalyticsPage() {
     if (!platform || user?.isGuest) return
 
     AnalyticsService.invalidateCache(platform.id)
-    setAnalyticsData(prev => {
-      const next = { ...prev }
-      delete next[activeTab]
-      return next
-    })
+    clearAnalyticsForPlatform(activeTab)
 
     setLoading(activeTab)
     setError(null)
     try {
       const data = await AnalyticsService.getPlatformAnalytics(platform.id)
-      setAnalyticsData(prev => ({ ...prev, [activeTab]: data }))
+      setAnalyticsForPlatform(activeTab, data)
     } catch (err: any) {
       setError(err.message || "Failed to refresh analytics")
     } finally {
@@ -167,7 +162,7 @@ export default function AnalyticsPage() {
       )
     }
 
-    const data = analyticsData[activeTab]
+    const data = analyticsCache[activeTab]
     if (!data) return null
 
     const activePlatform = platforms.find(p => p.platformName === activeTab)
