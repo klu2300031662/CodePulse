@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Calendar, Clock, ExternalLink, RefreshCw, Loader2, Trophy, Zap, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useDashboardStore } from "@/lib/store/dashboard.store"
 
 interface Contest {
   platform: string
@@ -58,32 +59,56 @@ function timeUntil(timestamp: number): string {
   return `${minutes}m`
 }
 
+const STALE_MS = 5 * 60 * 1000 // 5 min
+
 export default function ContestsPage() {
-  const [contests, setContests] = useState<Contest[]>([])
-  const [loading, setLoading] = useState(true)
+  const { contestsCache, setContestsCache, invalidateContests } = useDashboardStore()
+
+  // Initialize from cache instantly
+  const [contests, setContests] = useState<Contest[]>(contestsCache?.data || [])
+  const [loading, setLoading] = useState(!contestsCache)
   const [error, setError] = useState("")
   const [filter, setFilter] = useState<string>("all")
-  const [lastFetched, setLastFetched] = useState<Date | null>(null)
+  const [lastFetched, setLastFetched] = useState<Date | null>(
+    contestsCache ? new Date(contestsCache.fetchedAt) : null
+  )
+  const hasFetched = useRef(false)
 
-  const fetchContests = async () => {
-    setLoading(true)
+  const fetchContests = async (silent = false) => {
+    if (!silent) setLoading(true)
     setError("")
     try {
       const res = await fetch("/api/contests")
       if (!res.ok) throw new Error("Failed to fetch contests")
       const data = await res.json()
-      setContests(data.contests || [])
+      const list = data.contests || []
+      setContests(list)
+      setContestsCache(list)
       setLastFetched(new Date())
     } catch (err: any) {
-      setError(err.message || "Failed to load contests")
+      if (!silent) setError(err.message || "Failed to load contests")
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchContests()
-  }, [])
+    if (hasFetched.current) return
+    hasFetched.current = true
+
+    if (contestsCache && Date.now() - contestsCache.fetchedAt < STALE_MS) {
+      // Cache is fresh — use it, don't re-fetch
+      return
+    }
+
+    if (contestsCache) {
+      // Cache exists but is stale — show it instantly, refresh silently
+      fetchContests(true)
+    } else {
+      // No cache — show loader and fetch
+      fetchContests()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get unique platforms from contests
   const allPlatforms = Array.from(new Set(contests.map(c => c.platform))).sort()
@@ -111,13 +136,13 @@ export default function ContestsPage() {
             Real-time contest schedule from all major coding platforms.
             {lastFetched && (
               <span className="ml-2 text-xs opacity-60">
-                Updated {lastFetched.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                Updated {lastFetched.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })} IST
               </span>
             )}
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={fetchContests} disabled={loading} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => fetchContests(false)} disabled={loading} className="gap-2">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Refresh
         </Button>
@@ -237,11 +262,11 @@ export default function ContestsPage() {
                           <div className="flex flex-col items-end gap-0.5">
                             <span className="flex items-center gap-1.5 text-xs">
                               <Calendar className="w-3 h-3" />
-                              {startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {startDate.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Kolkata' })}
                             </span>
                             <span className="flex items-center gap-1.5 text-[10px] opacity-70">
                               <Clock className="w-2.5 h-2.5" />
-                              {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {startDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })} IST
                             </span>
                           </div>
                         </TableCell>

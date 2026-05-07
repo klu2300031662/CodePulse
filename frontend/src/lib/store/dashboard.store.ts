@@ -4,6 +4,16 @@ import { ProblemService, Problem } from '@/lib/api/problem.service';
 import { PlatformAnalytics } from '@/lib/api/analytics.service';
 import { GUEST_PLATFORMS } from '@/lib/guest-data';
 
+interface CachedContest {
+  platform: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  url: string;
+  status: 'upcoming' | 'ongoing';
+}
+
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const CACHE_KEY = 'codepulse_dashboard_cache';
 
@@ -47,6 +57,7 @@ interface DashboardState {
   platforms: PlatformLink[];
   problems: Problem[];
   analyticsCache: Record<string, PlatformAnalytics>;
+  contestsCache: { data: CachedContest[]; fetchedAt: number } | null;
 
   // Loading states
   platformsLoaded: boolean;
@@ -67,6 +78,11 @@ interface DashboardState {
   getAnalyticsForPlatform: (platform: string) => PlatformAnalytics | null;
   clearAnalyticsForPlatform: (platform: string) => void;
 
+  // Contests cache
+  setContestsCache: (data: CachedContest[]) => void;
+  getContestsCache: () => { data: CachedContest[]; fetchedAt: number } | null;
+  invalidateContests: () => void;
+
   // Optimistic updates
   setPlatforms: (platforms: PlatformLink[]) => void;
   removePlatformOptimistic: (id: number) => void;
@@ -78,6 +94,7 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
   platforms: (typeof window !== 'undefined' ? loadFromStorage<PlatformLink[]>('platforms') : null) || [],
   problems: (typeof window !== 'undefined' ? loadFromStorage<Problem[]>('problems') : null) || [],
   analyticsCache: (typeof window !== 'undefined' ? loadFromStorage<Record<string, PlatformAnalytics>>('analytics') : null) || {},
+  contestsCache: (typeof window !== 'undefined' ? loadFromStorage<{ data: CachedContest[]; fetchedAt: number }>('contests') : null) || null,
   platformsLoaded: false,
   problemsLoaded: false,
   loading: false,
@@ -248,5 +265,19 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
     delete updated[platform];
     set({ analyticsCache: updated });
     saveToStorage('analytics', updated);
+  },
+
+  // Contests cache — persists across tab switches
+  setContestsCache: (data: CachedContest[]) => {
+    const cache = { data, fetchedAt: Date.now() };
+    set({ contestsCache: cache });
+    saveToStorage('contests', cache);
+  },
+  getContestsCache: () => {
+    return get().contestsCache;
+  },
+  invalidateContests: () => {
+    set({ contestsCache: null });
+    try { localStorage.removeItem(`${CACHE_KEY}_contests`); } catch {}
   },
 }));
