@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import Editor from "@monaco-editor/react"
 import { Play, Loader2, Info, Sparkles, Zap, Brain, Clock, FileText, Lightbulb, Terminal, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -41,15 +41,64 @@ const STDIN_PATTERNS: Record<string, RegExp[]> = {
   javascript: [/readline\s*\(/, /prompt\s*\(/, /process\.stdin/],
 }
 
+const STORAGE_KEYS = {
+  code: 'codepulse_terminal_code',
+  language: 'codepulse_terminal_lang',
+  input: 'codepulse_terminal_input',
+}
+
 export default function TerminalPage() {
-  const [language, setLanguage] = useState("javascript")
-  const [code, setCode] = useState(DEFAULT_CODE["javascript"])
-  const [customInput, setCustomInput] = useState("")
+  // Restore from sessionStorage on mount (persists across tab switches)
+  const [language, setLanguage] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(STORAGE_KEYS.language) || 'javascript'
+    }
+    return 'javascript'
+  })
+  const [code, setCode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(STORAGE_KEYS.code) || DEFAULT_CODE['javascript']
+    }
+    return DEFAULT_CODE['javascript']
+  })
+  const [customInput, setCustomInput] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(STORAGE_KEYS.input) || ''
+    }
+    return ''
+  })
   const [isExecuting, setIsExecuting] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<ExecuteResponse | null>(null)
   const [analysis, setAnalysis] = useState<ComplexityAnalysis | null>(null)
   const [activeRightTab, setActiveRightTab] = useState("output")
+
+  // Persist code, language, and input to sessionStorage on every change
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEYS.code, code)
+  }, [code])
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEYS.language, language)
+  }, [language])
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEYS.input, customInput)
+  }, [customInput])
+
+  // Clear sessionStorage on logout (listen for storage event or auth token removal)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'token' && !e.newValue) {
+        // User logged out — clear terminal session
+        sessionStorage.removeItem(STORAGE_KEYS.code)
+        sessionStorage.removeItem(STORAGE_KEYS.language)
+        sessionStorage.removeItem(STORAGE_KEYS.input)
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   // Detect whether the code expects stdin input
   const needsInput = useMemo(() => {
@@ -151,8 +200,9 @@ export default function TerminalPage() {
                   Optimize
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="bg-zinc-900 text-white border-zinc-700">
-                <p>Coming Soon 🚀</p>
+              <TooltipContent side="bottom" className="bg-zinc-900 text-white border-zinc-700 max-w-[220px] text-center">
+                <p className="font-semibold">Optimized Version of Your Code</p>
+                <p className="text-zinc-400 text-xs mt-1">Coming Soon 🚀</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
