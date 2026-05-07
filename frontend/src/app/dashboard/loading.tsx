@@ -1,11 +1,11 @@
-import { Code2 } from "lucide-react"
+import Image from "next/image"
 
 export default function DashboardLoading() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] gap-5 animate-fade-in-up">
       <div className="relative">
         <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shadow-lg shadow-violet-500/20 animate-pulse">
-          <Code2 className="h-6 w-6 text-white" />
+          <Image src="/logo.png" alt="CodePulse" width={24} height={24} className="rounded-md" />
         </div>
         <div
           className="absolute inset-[-6px] rounded-2xl border-2 border-violet-500/20 animate-spin"

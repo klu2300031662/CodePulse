@@ -9,6 +9,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "CodePulse — Track, Analyze & Master Your Coding Journey",
   description: "All-in-one coding portfolio & productivity tool. Track problems, sync platforms, analyze performance, and prepare for technical interviews.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

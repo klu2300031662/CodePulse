@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Eye, EyeOff, CheckCircle2, Code2, ShieldCheck, XCircle, AlertTriangle, Loader2, Check, X } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, ShieldCheck, XCircle, AlertTriangle, Loader2, Check, X } from 'lucide-react';
+import Image from 'next/image';
 import { AuthService } from '@/lib/api/auth.service';
 
 type PageState = 'loading' | 'valid' | 'expired' | 'success';
@@ -275,7 +276,7 @@ function ResetPasswordForm() {
       {/* Logo / Brand */}
       <div className="mb-8 flex flex-col items-center gap-2">
         <div className="flex items-center gap-2 text-primary">
-          <Code2 className="h-8 w-8" />
+          <Image src="/logo.png" alt="CodePulse" width={32} height={32} className="rounded-md" />
           <span className="text-2xl font-bold tracking-tight">CodePulse</span>
         </div>
         <p className="text-sm text-muted-foreground">Track, Analyze & Master Your Coding Journey</p>

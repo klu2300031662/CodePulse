@@ -13,7 +13,7 @@ import CompanyPrep from "@/components/dashboard/CompanyPrep"
 import LinkedPlatforms from "@/components/dashboard/LinkedPlatforms"
 import Achievements from "@/components/dashboard/Achievements"
 import GuestBanner from "@/components/dashboard/GuestBanner"
-import { Code2 } from "lucide-react"
+import Image from "next/image"
 
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user) as any
@@ -37,7 +37,7 @@ export default function DashboardPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <div className="relative">
           <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shadow-xl shadow-violet-500/20 animate-pulse">
-            <Code2 className="h-8 w-8 text-white" />
+            <Image src="/logo.png" alt="CodePulse" width={32} height={32} className="rounded-lg" />
           </div>
           <div className="absolute inset-[-8px] rounded-3xl border-2 border-violet-500/20 animate-spin" style={{ animationDuration: '3s' }}>
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-violet-500" />

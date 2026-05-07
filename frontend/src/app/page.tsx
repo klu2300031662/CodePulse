@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Code2, Terminal, Target, BarChart3, Presentation, Users, Trophy } from "lucide-react"
+import Image from "next/image"
+import { Terminal, Target, BarChart3, Presentation, Users, Trophy } from "lucide-react"
 
 export default function Home() {
   return (
@@ -11,7 +12,7 @@ export default function Home() {
       {/* Navigation */}
       <header className="px-6 py-4 flex items-center justify-between border-b bg-background/80 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <Code2 className="h-6 w-6 text-primary" />
+          <Image src="/logo.png" alt="CodePulse" width={28} height={28} className="rounded-md" />
           <span className="text-xl font-bold tracking-tight">CodePulse</span>
         </div>
         <div className="flex items-center gap-4">

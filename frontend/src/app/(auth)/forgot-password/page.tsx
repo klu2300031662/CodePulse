@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle2, Mail, Code2, Clock, RefreshCw } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Mail, Clock, RefreshCw } from 'lucide-react';
+import Image from 'next/image';
 import { AuthService } from '@/lib/api/auth.service';
 
 export default function ForgotPasswordPage() {
@@ -66,7 +67,7 @@ export default function ForgotPasswordPage() {
         {/* Logo / Brand */}
         <div className="mb-8 flex flex-col items-center gap-2">
           <div className="flex items-center gap-2 text-primary">
-            <Code2 className="h-8 w-8" />
+            <Image src="/logo.png" alt="CodePulse" width={32} height={32} className="rounded-md" />
             <span className="text-2xl font-bold tracking-tight">CodePulse</span>
           </div>
           <p className="text-sm text-muted-foreground">Track, Analyze & Master Your Coding Journey</p>
