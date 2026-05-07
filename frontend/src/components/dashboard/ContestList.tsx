@@ -45,28 +45,12 @@ function getTimeRemaining(startTime: number): string {
   return `${minutes}m`
 }
 
-const CONTEST_CACHE_KEY = "codepulse_contests_cache";
-
-function getCachedContests(): Contest[] {
-  try {
-    const raw = localStorage.getItem(CONTEST_CACHE_KEY);
-    if (!raw) return [];
-    const { data, ts } = JSON.parse(raw);
-    if (Date.now() - ts < 30 * 60 * 1000 && data?.length > 0) return data;
-    return data || [];
-  } catch { return []; }
-}
-
-function setCachedContests(data: Contest[]) {
-  try {
-    localStorage.setItem(CONTEST_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
-  } catch {}
-}
-
 export default function ContestList() {
-  const cached = typeof window !== "undefined" ? getCachedContests() : [];
-  const [allContests, setAllContests] = useState<Contest[]>(cached)
-  const [loading, setLoading] = useState(cached.length === 0)
+  const { contestsCache, setContestsCache } = useDashboardStore()
+  const [allContests, setAllContests] = useState<Contest[]>(
+    contestsCache?.data?.map((c: any) => ({ platform: c.platform, title: c.title, startTime: c.startTime, url: c.url })) || []
+  )
+  const [loading, setLoading] = useState(!contestsCache)
   const user = useAuthStore((state) => state.user) as any
   const platforms = useDashboardStore((state) => state.platforms)
 
@@ -78,24 +62,32 @@ export default function ContestList() {
       setLoading(false)
       return
     }
-    // Fetch live contest data
+
+    // If cache is fresh (< 5 min), don't refetch
+    if (contestsCache && Date.now() - contestsCache.fetchedAt < 5 * 60 * 1000) {
+      setLoading(false)
+      return
+    }
+
+    // Fetch live contest data and store in shared cache
     fetch("/api/contests")
       .then((res) => res.json())
       .then((data) => {
-        const mapped = (data.contests || []).map((c: any) => ({
+        const contests = data.contests || []
+        setAllContests(contests.map((c: any) => ({
           platform: c.platform,
           title: c.title,
           startTime: c.startTime,
           url: c.url,
-        }))
-        setAllContests(mapped)
-        setCachedContests(mapped)
+        })))
+        // Store full contest data in shared Zustand cache (Contests tab reuses this)
+        setContestsCache(contests)
       })
       .catch((err) => console.error("Contest fetch error", err))
       .finally(() => setLoading(false))
-  }, [user?.isGuest])
+  }, [user?.isGuest]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Filter contests to only linked platforms
+  // Dashboard: Filter contests to only linked platforms
   const filteredContests = allContests.filter((c) => {
     return linkedPlatformNames.some((name: string) =>
       c.platform.toLowerCase().includes(name.toLowerCase()) ||
