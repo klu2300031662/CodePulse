@@ -17,12 +17,12 @@ interface SearchItem {
 }
 
 const SETTINGS_ITEMS: SearchItem[] = [
-  { id: "s-account", title: "Account Settings", subtitle: "Manage your profile and email", category: "setting", icon: "⚙️", route: "/settings" },
-  { id: "s-platforms", title: "Linked Platforms", subtitle: "Manage connected coding platforms", category: "setting", icon: "🔗", route: "/settings#platforms" },
-  { id: "s-notifications", title: "Notification Preferences", subtitle: "Configure alerts and reminders", category: "setting", icon: "🔔", route: "/settings#notifications" },
-  { id: "s-appearance", title: "Appearance", subtitle: "Dark mode, light mode, theme", category: "setting", icon: "🎨", route: "/settings#appearance" },
-  { id: "s-privacy", title: "Privacy Settings", subtitle: "Control data and visibility", category: "setting", icon: "🔒", route: "/settings#privacy" },
-  { id: "s-danger", title: "Delete Account", subtitle: "Permanently delete your account", category: "setting", icon: "⚠️", route: "/settings#danger" },
+  { id: "s-account", title: "Account Settings", subtitle: "Manage your profile and email", category: "setting", icon: "⚙️", route: "/dashboard/settings" },
+  { id: "s-platforms", title: "Linked Platforms", subtitle: "Manage connected coding platforms", category: "setting", icon: "🔗", route: "/dashboard/settings#platforms" },
+  { id: "s-notifications", title: "Notification Preferences", subtitle: "Configure alerts and reminders", category: "setting", icon: "🔔", route: "/dashboard/settings#notifications" },
+  { id: "s-appearance", title: "Appearance", subtitle: "Dark mode, light mode, theme", category: "setting", icon: "🎨", route: "/dashboard/settings#appearance" },
+  { id: "s-privacy", title: "Privacy Settings", subtitle: "Control data and visibility", category: "setting", icon: "🔒", route: "/dashboard/settings#privacy" },
+  { id: "s-danger", title: "Delete Account", subtitle: "Permanently delete your account", category: "setting", icon: "⚠️", route: "/dashboard/settings#danger" },
   { id: "s-analytics", title: "Platform Analytics", subtitle: "View detailed coding stats", category: "setting", icon: "📊", route: "/dashboard/analytics" },
   { id: "s-terminal", title: "Terminal Analyzer", subtitle: "Run code and analyze complexity", category: "setting", icon: "💻", route: "/dashboard/terminal" },
   { id: "s-projects", title: "Projects", subtitle: "View GitHub repositories", category: "setting", icon: "📁", route: "/dashboard/projects" },
