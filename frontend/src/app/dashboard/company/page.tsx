@@ -1,92 +1,67 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Building2, Code2, Target } from "lucide-react"
+import { Building2, FileSearch, BookOpen, Target, Users, TrendingUp, Rocket } from "lucide-react"
 
-const COMPANIES = [
-  {
-    name: "Google",
-    totalProblems: 150,
-    solved: 45,
-    matchRate: 85,
-    topTopics: ["Dynamic Programming", "Graphs", "Trees"],
-    logo: "G"
-  },
-  {
-    name: "Amazon",
-    totalProblems: 120,
-    solved: 68,
-    matchRate: 92,
-    topTopics: ["Arrays", "Strings", "System Design"],
-    logo: "A"
-  },
-  {
-    name: "Meta",
-    totalProblems: 100,
-    solved: 30,
-    matchRate: 75,
-    topTopics: ["Recursion", "Binary Search", "Two Pointers"],
-    logo: "M"
-  },
-  {
-    name: "Microsoft",
-    totalProblems: 130,
-    solved: 80,
-    matchRate: 95,
-    topTopics: ["Linked Lists", "Sorting", "Trees"],
-    logo: "MS"
-  }
+const features = [
+  { icon: Building2, label: "Company-wise Questions", desc: "Browse problems frequently asked by FAANG and top tech companies" },
+  { icon: FileSearch, label: "Role-based Filtering", desc: "Filter by SDE-1, SDE-2, Data Engineer, and more roles" },
+  { icon: BookOpen, label: "Interview Experiences", desc: "Read real interview experiences shared by the community" },
+  { icon: Target, label: "Targeted Practice", desc: "Get curated problem sets tailored to your dream company" },
+  { icon: Users, label: "Company Insights", desc: "Learn about interview rounds, process, and hiring bar" },
+  { icon: TrendingUp, label: "Progress Tracking", desc: "Track how many company-tagged problems you've solved" },
 ]
 
 export default function CompanyPrepPage() {
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Company Preparation</h2>
-        <p className="text-muted-foreground">Track your progress against top tech company specific problem sets.</p>
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] px-4 animate-fade-in-up">
+      {/* Glow background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-500/10 via-violet-500/10 to-cyan-500/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {COMPANIES.map((company) => (
-          <Card key={company.name} className="overflow-hidden">
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
-                {company.logo}
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-xl">{company.name}</CardTitle>
-                <CardDescription>Preparation Readiness</CardDescription>
-              </div>
-              <Badge variant={company.matchRate >= 90 ? "default" : company.matchRate >= 80 ? "secondary" : "outline"} className="text-sm px-2 py-1">
-                {company.matchRate}% Ready
-              </Badge>
-            </CardHeader>
-            <CardContent className="space-y-4 tracking-wide">
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-medium">
-                  <span className="flex items-center gap-2 text-muted-foreground"><Code2 className="h-4 w-4"/> Solved Problems</span>
-                  <span>{company.solved} / {company.totalProblems}</span>
-                </div>
-                <Progress value={(company.solved / company.totalProblems) * 100} className="h-2" />
-              </div>
+      {/* Badge */}
+      <div className="relative mb-6">
+        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-violet-500/10 border border-blue-300/30 dark:border-blue-700/30 text-blue-700 dark:text-blue-400 text-sm font-semibold">
+          <Rocket className="h-4 w-4" />
+          Coming Soon
+        </span>
+      </div>
 
-              <div className="space-y-2 pt-2 border-t">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Target className="h-4 w-4"/> Target Topics
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {company.topTopics.map(topic => (
-                    <Badge key={topic} variant="outline" className="bg-zinc-50 dark:bg-zinc-900">{topic}</Badge>
-                  ))}
-                </div>
+      {/* Title */}
+      <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-center bg-gradient-to-r from-zinc-900 via-zinc-600 to-zinc-900 dark:from-white dark:via-zinc-300 dark:to-white bg-clip-text text-transparent mb-4">
+        Company Preparation
+      </h1>
+
+      {/* Teaser Description */}
+      <p className="text-center text-muted-foreground max-w-xl text-base sm:text-lg leading-relaxed mb-10">
+        Prepare smarter with company-specific question banks, role-based filters, 
+        real interview experiences, and targeted practice — everything you need to crack your dream company.
+      </p>
+
+      {/* Feature Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl w-full mb-10">
+        {features.map((f, i) => (
+          <div
+            key={i}
+            className="group relative p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/5"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-100 to-violet-100 dark:from-blue-900/40 dark:to-violet-900/40 group-hover:scale-110 transition-transform duration-300">
+                <f.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">{f.label}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{f.desc}</p>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
+
+      {/* CTA line */}
+      <p className="text-xs text-muted-foreground/60 text-center">
+        We&apos;re building something special. Stay tuned! ✨
+      </p>
     </div>
   )
 }
