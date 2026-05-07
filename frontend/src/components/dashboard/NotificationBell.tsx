@@ -153,14 +153,14 @@ export default function NotificationBell() {
   const unreadCount = notifications.filter(n => !n.read).length
 
   const markRead = (id: string) => {
-    const updated = [...new Set([...readIds, id])]
+    const updated = Array.from(new Set([...readIds, id]))
     setReadIds(updated)
     setStoredReadIds(updated)
   }
 
   const markAllRead = () => {
     const allIds = notifications.map(n => n.id)
-    const updated = [...new Set([...readIds, ...allIds])]
+    const updated = Array.from(new Set([...readIds, ...allIds]))
     setReadIds(updated)
     setStoredReadIds(updated)
   }
