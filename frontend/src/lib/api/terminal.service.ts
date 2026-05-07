@@ -28,15 +28,21 @@ export interface ComplexityAnalysis {
 export const TerminalService = {
   execute: async (data: ExecuteRequest): Promise<ExecuteResponse> => {
     try {
-      const response = await api.post('/execute', data);
-      return response.data;
-    } catch (error: any) {
-      if (error.response) {
-        throw new Error(error.backendMessage || 'Code execution failed.');
-      } else if (error.request) {
-        throw new Error('Unable to reach the server. The backend may be starting up — please try again in a moment.');
+      const response = await fetch('/api/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok && !result.status) {
+        throw new Error(result.error || 'Code execution failed.');
       }
-      throw new Error('An unexpected error occurred during code execution.');
+
+      return result;
+    } catch (error: any) {
+      throw new Error(error.message || 'An unexpected error occurred during code execution.');
     }
   },
 

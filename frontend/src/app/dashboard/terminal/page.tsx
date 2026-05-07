@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import Editor from "@monaco-editor/react"
-import { Play, Loader2, Info, Sparkles, Zap, Brain, Clock, FileText, Lightbulb } from "lucide-react"
+import { Play, Loader2, Info, Sparkles, Zap, Brain, Clock, FileText, Lightbulb, Terminal, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
@@ -32,6 +32,15 @@ const DEFAULT_CODE: Record<string, string> = {
   javascript: 'console.log("Hello, CodePulse!");\n',
 }
 
+// Detect if code uses stdin functions
+const STDIN_PATTERNS: Record<string, RegExp[]> = {
+  c:          [/scanf\s*\(/, /gets\s*\(/, /fgets\s*\(/, /getchar\s*\(/],
+  cpp:        [/cin\s*>>/, /getline\s*\(/, /scanf\s*\(/],
+  java:       [/Scanner/, /BufferedReader/, /System\.in/, /readLine\s*\(/],
+  python:     [/input\s*\(/],
+  javascript: [/readline\s*\(/, /prompt\s*\(/, /process\.stdin/],
+}
+
 export default function TerminalPage() {
   const [language, setLanguage] = useState("javascript")
   const [code, setCode] = useState(DEFAULT_CODE["javascript"])
@@ -41,6 +50,12 @@ export default function TerminalPage() {
   const [result, setResult] = useState<ExecuteResponse | null>(null)
   const [analysis, setAnalysis] = useState<ComplexityAnalysis | null>(null)
   const [activeRightTab, setActiveRightTab] = useState("output")
+
+  // Detect whether the code expects stdin input
+  const needsInput = useMemo(() => {
+    const patterns = STDIN_PATTERNS[language] || []
+    return patterns.some(p => p.test(code))
+  }, [code, language])
 
   const handleLanguageChange = (val: string) => {
     setLanguage(val)
@@ -60,7 +75,7 @@ export default function TerminalPage() {
       const error = err as any
       setResult({
         status: "Error", output: "",
-        error: error.response?.data?.error || error.message || "Failed to execute code.",
+        error: error.message || "Failed to execute code.",
         executionTimeMs: 0, memoryUsage: "0 MB",
         timeComplexityEstimate: "N/A", spaceComplexityEstimate: "N/A"
       })
@@ -188,7 +203,12 @@ export default function TerminalPage() {
                 <TabsTrigger value="analysis" className="flex items-center gap-1">
                   <Sparkles className="h-3 w-3" /> Analysis
                 </TabsTrigger>
-                <TabsTrigger value="input">Input</TabsTrigger>
+                <TabsTrigger value="input" className="relative">
+                  Input
+                  {needsInput && !customInput.trim() && (
+                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                  )}
+                </TabsTrigger>
               </TabsList>
             </CardHeader>
             <CardContent className="flex-1 p-4 overflow-auto min-h-0">
@@ -196,12 +216,21 @@ export default function TerminalPage() {
               <TabsContent value="input" className="h-full m-0">
                 <div className="flex flex-col h-full space-y-2">
                   <Label>Standard Input (stdin)</Label>
+                  {needsInput && !customInput.trim() && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-400 text-xs">
+                      <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>Your code uses <strong>stdin</strong> — provide input below or it will run with empty input.</span>
+                    </div>
+                  )}
                   <Textarea
-                    placeholder="Enter custom input here..."
+                    placeholder="Enter custom input here (one value per line)..."
                     className="flex-1 font-mono text-sm resize-none"
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
                   />
+                  <p className="text-[10px] text-muted-foreground">
+                    Tip: Enter input values separated by newlines, just like typing in a terminal.
+                  </p>
                 </div>
               </TabsContent>
 
@@ -220,6 +249,13 @@ export default function TerminalPage() {
                       <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {result.executionTimeMs} ms</span>
                       {result.memoryUsage && <span>💾 {result.memoryUsage}</span>}
                     </div>
+
+                    {/* Stdin indicator */}
+                    {customInput.trim() && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-zinc-100 dark:bg-zinc-900 rounded px-2 py-1 w-fit">
+                        <Terminal className="h-3 w-3" /> Custom input provided
+                      </div>
+                    )}
 
                     <div className="flex-1 space-y-2 overflow-auto">
                       <Label>Standard Output</Label>
@@ -241,6 +277,12 @@ export default function TerminalPage() {
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2">
                     <Info className="h-8 w-8 opacity-20" />
                     <p className="text-sm">Run your code to see the output here</p>
+                    {needsInput && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        Your code seems to need input — check the Input tab
+                      </p>
+                    )}
                   </div>
                 )}
               </TabsContent>
