@@ -1,344 +1,67 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { format } from "date-fns"
-import { 
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger 
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { 
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
-} from "@/components/ui/select"
-import { ProblemService, Problem } from "@/lib/api/problem.service"
-import { useDashboardStore } from "@/lib/store/dashboard.store"
-import { useAuthStore } from "@/lib/store/auth.store"
-import { Search, Plus, Trash2, Pencil, Download, Star } from "lucide-react"
-import { prepInstaProblems } from "@/lib/data/prepinsta"
+import { ClipboardList, Bell, StickerIcon, FolderKanban, Tag, BarChart3, Rocket } from "lucide-react"
+
+const features = [
+  { icon: ClipboardList, label: "Track Solved Problems", desc: "Log every problem with platform, difficulty, and status" },
+  { icon: StickerIcon, label: "Add Notes", desc: "Write personal notes, approaches, and edge cases" },
+  { icon: Bell, label: "Set Reminders", desc: "Get reminded to revisit problems for spaced repetition" },
+  { icon: FolderKanban, label: "Organize by Topic", desc: "Group problems by arrays, trees, graphs, DP, and more" },
+  { icon: Tag, label: "Difficulty Tags", desc: "Filter and sort by Easy, Medium, and Hard" },
+  { icon: BarChart3, label: "Progress Analytics", desc: "Visualize your solving streak and weak areas" },
+]
 
 export default function TrackerPage() {
-  const user = useAuthStore((state) => state.user) as any
-  const { problems: cachedProblems, fetchProblems, invalidateProblems, invalidateAll } = useDashboardStore()
-  const [problems, setProblems] = useState<Problem[]>(cachedProblems)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingProblem, setEditingProblem] = useState<Problem | null>(null)
-  
-  const [formData, setFormData] = useState<Problem>({
-    title: "",
-    url: "",
-    platform: "LeetCode",
-    difficulty: "Medium",
-    status: "Solved",
-    dateSolved: new Date().toISOString().split('T')[0],
-    notes: "",
-    tags: ""
-  })
-
-  useEffect(() => {
-    fetchProblems(user?.isGuest)
-  }, [user?.isGuest, fetchProblems])
-
-  // Sync from cache
-  useEffect(() => {
-    setProblems(cachedProblems)
-  }, [cachedProblems])
-
-  const loadProblems = async () => {
-    invalidateProblems()
-    const data = await fetchProblems(user?.isGuest)
-    setProblems(data)
-  }
-
-  const handleToggleStar = async (problem: Problem) => {
-    if (!problem.id) return
-    try {
-      const updated = await ProblemService.toggleStar(problem.id)
-      // Update local state immediately
-      setProblems(prev => prev.map(p => p.id === problem.id ? { ...p, starred: updated.starred } : p))
-      // Invalidate caches so dashboard picks up the change instantly
-      invalidateAll()
-    } catch (err) {
-      console.error("Failed to toggle star", err)
-    }
-  }
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      if (editingProblem && editingProblem.id) {
-        await ProblemService.update(editingProblem.id, formData)
-      } else {
-        await ProblemService.create(formData)
-      }
-      setIsModalOpen(false)
-      loadProblems()
-      resetForm()
-    } catch (err) {
-      console.error("Failed to save problem", err)
-    }
-  }
-
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this problem?")) {
-      try {
-        await ProblemService.delete(id)
-        loadProblems()
-      } catch (err) {
-        console.error("Failed to delete problem", err)
-      }
-    }
-  }
-
-  const handleLoadPrepInsta = async () => {
-    if (confirm("This will add 20 top PrepInsta coding problems to your tracker. Proceed?")) {
-      try {
-        for (const p of prepInstaProblems) {
-          const problemData = {
-            ...p,
-            dateSolved: new Date().toISOString().split('T')[0],
-            notes: "Practice problem from Top 100 Codes",
-            tags: "Top 100"
-          };
-          await ProblemService.create(problemData as Problem);
-        }
-        loadProblems();
-        alert("Problems added successfully!");
-      } catch (err) {
-        console.error("Failed to load PrepInsta problems", err);
-        alert("Failed to add some problems. Please check console.");
-      }
-    }
-  }
-
-  const resetForm = () => {
-    setEditingProblem(null)
-    setFormData({
-      title: "",
-      url: "",
-      platform: "LeetCode",
-      difficulty: "Medium",
-      status: "Solved",
-      dateSolved: new Date().toISOString().split('T')[0],
-      notes: "",
-      tags: ""
-    })
-  }
-
-  const openEditModal = (problem: Problem) => {
-    setEditingProblem(problem)
-    setFormData(problem)
-    setIsModalOpen(true)
-  }
-  
-  const getDifficultyColor = (diff: string) => {
-    switch (diff.toLowerCase()) {
-      case 'easy': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-      case 'hard': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-      default: return 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300'
-    }
-  }
-
-  const filteredProblems = problems.filter(p => 
-    p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    p.platform.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Problems Tracker</h2>
-          <p className="text-muted-foreground">Manage and track your solved coding challenges.</p>
-        </div>
-        
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex gap-2 text-zinc-600 border-zinc-200 hover:bg-zinc-100 dark:text-zinc-300 dark:border-zinc-700 dark:hover:bg-zinc-800" onClick={handleLoadPrepInsta}>
-            <Download className="h-4 w-4" /> Load PrepInsta Top 100
-          </Button>
-          <Dialog open={isModalOpen} onOpenChange={(open) => {
-            if(!open) resetForm()
-            setIsModalOpen(open)
-          }}>
-            <DialogTrigger asChild>
-              <Button className="flex gap-2">
-                <Plus className="h-4 w-4" /> Add Problem
-              </Button>
-            </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>{editingProblem ? 'Edit Problem' : 'Add New Problem'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSave} className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 col-span-2">
-                  <Label>Problem Title *</Label>
-                  <Input 
-                    required 
-                    value={formData.title} 
-                    onChange={e => setFormData({...formData, title: e.target.value})} 
-                    placeholder="Two Sum"
-                  />
-                </div>
-                
-                <div className="space-y-2 col-span-2">
-                  <Label>URL</Label>
-                  <Input 
-                    value={formData.url} 
-                    onChange={e => setFormData({...formData, url: e.target.value})} 
-                    placeholder="https://leetcode.com/problems/..."
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Platform *</Label>
-                  <Select 
-                    value={formData.platform} 
-                    onValueChange={(val) => setFormData({...formData, platform: val})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select platform" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LeetCode">LeetCode</SelectItem>
-                      <SelectItem value="HackerRank">HackerRank</SelectItem>
-                      <SelectItem value="CodeChef">CodeChef</SelectItem>
-                      <SelectItem value="Codeforces">Codeforces</SelectItem>
-                      <SelectItem value="PrepInsta">PrepInsta</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Difficulty *</Label>
-                  <Select 
-                    value={formData.difficulty} 
-                    onValueChange={(val) => setFormData({...formData, difficulty: val})}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Difficulty" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Easy">Easy</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="Hard">Hard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Status *</Label>
-                  <Select 
-                    value={formData.status} 
-                    onValueChange={(val) => setFormData({...formData, status: val})}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Solved">Solved</SelectItem>
-                      <SelectItem value="Attempted">Attempted</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Date Solved</Label>
-                  <Input 
-                    type="date" 
-                    value={formData.dateSolved} 
-                    onChange={e => setFormData({...formData, dateSolved: e.target.value})} 
-                  />
-                </div>
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] px-4 animate-fade-in-up">
+      {/* Glow background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-violet-500/10 via-cyan-500/10 to-amber-500/10 rounded-full blur-3xl" />
+      </div>
+
+      {/* Badge */}
+      <div className="relative mb-6">
+        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-300/30 dark:border-amber-700/30 text-amber-700 dark:text-amber-400 text-sm font-semibold">
+          <Rocket className="h-4 w-4" />
+          Coming Soon
+        </span>
+      </div>
+
+      {/* Title */}
+      <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-center bg-gradient-to-r from-zinc-900 via-zinc-600 to-zinc-900 dark:from-white dark:via-zinc-300 dark:to-white bg-clip-text text-transparent mb-4">
+        Problems Tracker
+      </h1>
+
+      {/* Teaser Description */}
+      <p className="text-center text-muted-foreground max-w-xl text-base sm:text-lg leading-relaxed mb-10">
+        Soon you&apos;ll be able to track every problem you&apos;ve solved, add notes, set reminders, 
+        and organize by topic and difficulty — all in one place.
+      </p>
+
+      {/* Feature Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl w-full mb-10">
+        {features.map((f, i) => (
+          <div
+            key={i}
+            className="group relative p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm hover:border-violet-300 dark:hover:border-violet-700 transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/5"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-violet-100 to-cyan-100 dark:from-violet-900/40 dark:to-cyan-900/40 group-hover:scale-110 transition-transform duration-300">
+                <f.icon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
               </div>
-              
-              <Button type="submit" className="w-full mt-6">
-                {editingProblem ? 'Update Problem' : 'Save Problem'}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-        </div>
+              <div>
+                <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">{f.label}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{f.desc}</p>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="flex items-center space-x-2 bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-800 rounded-md px-3 py-2 w-full max-w-sm shadow-sm relative">
-        <Search className="h-5 w-5 text-muted-foreground mr-2" />
-        <input 
-          type="text" 
-          placeholder="Search by title or platform..." 
-          className="bg-transparent border-none outline-none w-full text-sm"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      <div className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#09090b] shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Platform</TableHead>
-              <TableHead>Difficulty</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredProblems.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  No problems found. Start tracking your progress!
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredProblems.map((problem) => (
-                <TableRow key={problem.id}>
-                  <TableCell className="font-medium">
-                    {problem.url ? (
-                      <a href={problem.url} target="_blank" rel="noreferrer" className="hover:underline text-primary">
-                        {problem.title}
-                      </a>
-                    ) : problem.title}
-                  </TableCell>
-                  <TableCell>{problem.platform}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={getDifficultyColor(problem.difficulty)}>
-                      {problem.difficulty}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{problem.status}</TableCell>
-                  <TableCell>
-                    {problem.dateSolved ? format(new Date(problem.dateSolved), 'MMM d, yyyy') : '-'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleToggleStar(problem)}
-                        className={problem.starred ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30" : "text-zinc-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"}
-                        title={problem.starred ? "Unstar" : "Star"}
-                      >
-                        <Star className={`h-4 w-4 ${problem.starred ? 'fill-current' : ''}`} />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openEditModal(problem)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950" onClick={() => problem.id && handleDelete(problem.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      {/* CTA line */}
+      <p className="text-xs text-muted-foreground/60 text-center">
+        We&apos;re building something special. Stay tuned! ✨
+      </p>
     </div>
   )
 }
