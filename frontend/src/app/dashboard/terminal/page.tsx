@@ -195,10 +195,15 @@ export default function TerminalPage() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" className="flex gap-2 opacity-70 cursor-not-allowed" disabled>
-                  <Lightbulb className="h-4 w-4" />
-                  Optimize
-                </Button>
+                <div className="relative">
+                  <Button variant="outline" className="flex gap-2 border-dashed border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30" disabled>
+                    <Lightbulb className="h-4 w-4" />
+                    Optimize
+                  </Button>
+                  <span className="absolute -top-2 -right-2 px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm whitespace-nowrap">
+                    SOON 🚀
+                  </span>
+                </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="bg-zinc-900 text-white border-zinc-700 max-w-[220px] text-center">
                 <p className="font-semibold">Optimized Version of Your Code</p>
