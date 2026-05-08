@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuthStore } from "@/lib/store/auth.store"
 import GuestGate from "@/components/dashboard/GuestGate"
+import { GitHubService } from "@/lib/api/github.service"
 
 // GitHub language colors
 const LANG_COLORS: Record<string, string> = {
@@ -32,7 +33,21 @@ interface Repository {
   fork: boolean
 }
 
-const STORAGE_KEYS = {
+/**
+ * Build user-specific storage keys.
+ * This ensures GitHub data from one user doesn't leak into another user's session.
+ */
+function getStorageKeys(userId: number | string) {
+  const prefix = `codepulse_github_${userId}`
+  return {
+    repos: `${prefix}_repos`,
+    pinned: `${prefix}_pinned`,
+    lastSync: `${prefix}_lastSync`,
+  }
+}
+
+// Legacy keys (for migration/cleanup)
+const LEGACY_STORAGE_KEYS = {
   username: "codepulse_github_username",
   repos: "codepulse_github_repos",
   pinned: "codepulse_github_pinned",
@@ -45,6 +60,7 @@ export default function ProjectsPage() {
   const user = useAuthStore((s) => s.user) as any
   const [repos, setRepos] = useState<Repository[]>([])
   const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [username, setUsername] = useState("")
   const [inputUsername, setInputUsername] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -53,27 +69,90 @@ export default function ProjectsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null)
 
-  // Restore from localStorage on mount
-  useEffect(() => {
-    const savedUsername = localStorage.getItem(STORAGE_KEYS.username)
-    const savedRepos = localStorage.getItem(STORAGE_KEYS.repos)
-    const savedPinned = localStorage.getItem(STORAGE_KEYS.pinned)
-    const savedSync = localStorage.getItem(STORAGE_KEYS.lastSync)
+  const storageKeys = useMemo(() => {
+    return user?.id ? getStorageKeys(user.id) : null
+  }, [user?.id])
 
-    if (savedUsername) setUsername(savedUsername)
-    if (savedRepos) {
-      try { setRepos(JSON.parse(savedRepos)) } catch { /* ignore */ }
-    }
-    if (savedPinned) {
-      try { setPinnedIds(JSON.parse(savedPinned)) } catch { /* ignore */ }
-    }
-    if (savedSync) setLastSyncTime(savedSync)
-  }, [])
-
-  // Persist pinned repos
+  // ── On mount: restore from backend + user-scoped localStorage ──
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.pinned, JSON.stringify(pinnedIds))
-  }, [pinnedIds])
+    if (!user || user.isGuest || !storageKeys) {
+      setInitialLoading(false)
+      return
+    }
+
+    // Migrate legacy keys → user-specific keys (one-time)
+    migrateLegacyKeys(storageKeys)
+
+    // 1. Try user-scoped localStorage for instant render
+    const cachedRepos = localStorage.getItem(storageKeys.repos)
+    const cachedPinned = localStorage.getItem(storageKeys.pinned)
+    const cachedSync = localStorage.getItem(storageKeys.lastSync)
+
+    if (cachedRepos) {
+      try { setRepos(JSON.parse(cachedRepos)) } catch { /* ignore */ }
+    }
+    if (cachedPinned) {
+      try { setPinnedIds(JSON.parse(cachedPinned)) } catch { /* ignore */ }
+    }
+    if (cachedSync) setLastSyncTime(cachedSync)
+
+    // 2. Load GitHub username from backend (persisted across devices/sessions)
+    GitHubService.getGitHubLink()
+      .then((data) => {
+        if (data.linked && data.githubUsername) {
+          setUsername(data.githubUsername)
+          if (data.lastSyncedAt) setLastSyncTime(data.lastSyncedAt)
+
+          // If we have no cached repos, fetch them now
+          if (!cachedRepos) {
+            fetchAllRepos(data.githubUsername).then((repos) => {
+              setRepos(repos)
+              const now = new Date().toISOString()
+              setLastSyncTime(now)
+              if (storageKeys) {
+                localStorage.setItem(storageKeys.repos, JSON.stringify(repos))
+                localStorage.setItem(storageKeys.lastSync, now)
+              }
+            }).catch(console.error)
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load GitHub link:", err)
+      })
+      .finally(() => {
+        setInitialLoading(false)
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
+  // Persist pinned repos (user-scoped)
+  useEffect(() => {
+    if (storageKeys) {
+      localStorage.setItem(storageKeys.pinned, JSON.stringify(pinnedIds))
+    }
+  }, [pinnedIds, storageKeys])
+
+  // Migrate old generic keys to user-specific keys (one-time cleanup)
+  function migrateLegacyKeys(keys: ReturnType<typeof getStorageKeys>) {
+    const legacyUsername = localStorage.getItem(LEGACY_STORAGE_KEYS.username)
+    const legacyRepos = localStorage.getItem(LEGACY_STORAGE_KEYS.repos)
+    const legacyPinned = localStorage.getItem(LEGACY_STORAGE_KEYS.pinned)
+    const legacySync = localStorage.getItem(LEGACY_STORAGE_KEYS.lastSync)
+
+    if (legacyRepos && !localStorage.getItem(keys.repos)) {
+      localStorage.setItem(keys.repos, legacyRepos)
+    }
+    if (legacyPinned && !localStorage.getItem(keys.pinned)) {
+      localStorage.setItem(keys.pinned, legacyPinned)
+    }
+    if (legacySync && !localStorage.getItem(keys.lastSync)) {
+      localStorage.setItem(keys.lastSync, legacySync)
+    }
+
+    // Clean up legacy keys
+    Object.values(LEGACY_STORAGE_KEYS).forEach(k => localStorage.removeItem(k))
+  }
 
   // Fetch ALL repos (handles pagination from GitHub API)
   const fetchAllRepos = useCallback(async (user: string) => {
@@ -100,19 +179,23 @@ export default function ProjectsPage() {
     if (!inputUsername.trim()) return
     setIsDialogOpen(false)
     setLoading(true)
-    const user = inputUsername.trim()
-    setUsername(user)
+    const ghUser = inputUsername.trim()
 
     try {
-      const data = await fetchAllRepos(user)
+      const data = await fetchAllRepos(ghUser)
       setRepos(data)
+      setUsername(ghUser)
       const now = new Date().toISOString()
       setLastSyncTime(now)
 
-      // Persist
-      localStorage.setItem(STORAGE_KEYS.username, user)
-      localStorage.setItem(STORAGE_KEYS.repos, JSON.stringify(data))
-      localStorage.setItem(STORAGE_KEYS.lastSync, now)
+      // Persist username to backend (survives logout)
+      await GitHubService.linkGitHub(ghUser)
+
+      // Cache repos in user-scoped localStorage
+      if (storageKeys) {
+        localStorage.setItem(storageKeys.repos, JSON.stringify(data))
+        localStorage.setItem(storageKeys.lastSync, now)
+      }
     } catch (err) {
       console.error(err)
       setRepos([])
@@ -130,8 +213,13 @@ export default function ProjectsPage() {
       const now = new Date().toISOString()
       setLastSyncTime(now)
 
-      localStorage.setItem(STORAGE_KEYS.repos, JSON.stringify(data))
-      localStorage.setItem(STORAGE_KEYS.lastSync, now)
+      // Update sync time on backend
+      GitHubService.updateSyncTime().catch(() => {})
+
+      if (storageKeys) {
+        localStorage.setItem(storageKeys.repos, JSON.stringify(data))
+        localStorage.setItem(storageKeys.lastSync, now)
+      }
     } catch (err) {
       console.error(err)
     } finally {
@@ -139,7 +227,15 @@ export default function ProjectsPage() {
     }
   }
 
-  const unlinkGithub = () => {
+  const unlinkGithub = async () => {
+    try {
+      // Remove from backend first
+      await GitHubService.unlinkGitHub()
+    } catch (err) {
+      console.error("Failed to unlink GitHub from backend:", err)
+    }
+
+    // Clear local state
     setUsername("")
     setRepos([])
     setPinnedIds([])
@@ -147,7 +243,11 @@ export default function ProjectsPage() {
     setSearchQuery("")
     setCurrentPage(1)
     setInputUsername("")
-    Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k))
+
+    // Clear user-scoped localStorage
+    if (storageKeys) {
+      Object.values(storageKeys).forEach(k => localStorage.removeItem(k))
+    }
   }
 
   const togglePin = (id: number) => {
@@ -194,6 +294,16 @@ export default function ProjectsPage() {
   }
 
   if (user?.isGuest) return <GuestGate />
+
+  // Initial loading (checking backend for linked GitHub)
+  if (initialLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-muted-foreground animate-fade-in-up">
+        <Loader2 className="h-10 w-10 animate-spin text-violet-500 mb-4" />
+        <p className="text-sm">Loading your projects...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 animate-fade-in-up">

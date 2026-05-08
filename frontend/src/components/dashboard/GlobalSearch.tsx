@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { Search, X, Trophy, FolderGit2, Code2, Settings, ExternalLink } from "lucide-react"
 import { useDashboardStore } from "@/lib/store/dashboard.store"
+import { useAuthStore } from "@/lib/store/auth.store"
 import { useRouter } from "next/navigation"
 import Fuse from "fuse.js"
 
@@ -46,6 +47,7 @@ export default function GlobalSearch() {
 
   const contestsCache = useDashboardStore((s) => s.contestsCache)
   const platforms = useDashboardStore((s) => s.platforms)
+  const authUser = useAuthStore((s) => s.user) as any
 
   // Build search index
   const allItems = useMemo<SearchItem[]>(() => {
@@ -65,9 +67,11 @@ export default function GlobalSearch() {
       })
     }
 
-    // GitHub projects from localStorage
+    // GitHub projects from user-specific localStorage (fallback to legacy key)
     try {
-      const repos = JSON.parse(localStorage.getItem("codepulse_github_repos") || "[]")
+      const userKey = authUser?.id ? `codepulse_github_${authUser.id}_repos` : null
+      const reposJson = (userKey && localStorage.getItem(userKey)) || localStorage.getItem("codepulse_github_repos") || "[]"
+      const repos = JSON.parse(reposJson)
       repos.forEach((r: any) => {
         items.push({
           id: `p-${r.id}`,
@@ -93,7 +97,7 @@ export default function GlobalSearch() {
     })
 
     return items
-  }, [contestsCache, platforms])
+  }, [contestsCache, platforms, authUser?.id])
 
   const fuse = useMemo(() => new Fuse(allItems, {
     keys: ["title", "subtitle"],

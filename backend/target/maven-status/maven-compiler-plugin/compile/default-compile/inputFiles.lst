@@ -2,6 +2,7 @@ C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backe
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\controllers\AuthController.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\controllers\CodeExecutionController.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\controllers\ContestController.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\controllers\GitHubLinkController.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\controllers\HealthController.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\controllers\PlatformLinkController.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\controllers\ProblemController.java
@@ -11,6 +12,7 @@ C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backe
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\exception\GlobalExceptionHandler.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\exception\ResourceNotFoundException.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\exception\UnauthorizedException.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\models\GitHubLink.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\models\PlatformLink.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\models\Problem.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\models\User.java
@@ -21,6 +23,7 @@ C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backe
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\payload\response\ErrorResponse.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\payload\response\JwtResponse.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\payload\response\MessageResponse.java
+C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\repository\GitHubLinkRepository.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\repository\PlatformLinkRepository.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\repository\ProblemRepository.java
 C:\Users\HP\OneDrive\Desktop\CodePulse\backend\src\main\java\com\codepulse\backend\repository\UserRepository.java

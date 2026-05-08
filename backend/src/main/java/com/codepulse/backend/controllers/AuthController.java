@@ -5,6 +5,7 @@ import com.codepulse.backend.payload.request.LoginRequest;
 import com.codepulse.backend.payload.request.SignupRequest;
 import com.codepulse.backend.payload.response.JwtResponse;
 import com.codepulse.backend.payload.response.MessageResponse;
+import com.codepulse.backend.repository.GitHubLinkRepository;
 import com.codepulse.backend.repository.PlatformLinkRepository;
 import com.codepulse.backend.repository.ProblemRepository;
 import com.codepulse.backend.repository.UserRepository;
@@ -52,6 +53,9 @@ public class AuthController {
 
   @Autowired
   ProblemRepository problemRepository;
+
+  @Autowired
+  GitHubLinkRepository gitHubLinkRepository;
 
   @PostMapping("/signin")
   public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -414,6 +418,7 @@ public class AuthController {
       // Delete all related data first using native SQL (avoids entity column mismatch issues)
       problemRepository.deleteAllByUserId(userId);
       platformLinkRepository.deleteAllByUserId(userId);
+      gitHubLinkRepository.deleteByUserId(userId);
 
       // Delete the user
       userRepository.delete(user);
