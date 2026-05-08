@@ -392,6 +392,7 @@ public class AuthController {
   }
 
   @DeleteMapping("/delete-account")
+  @org.springframework.transaction.annotation.Transactional
   public ResponseEntity<?> deleteAccount() {
     try {
       Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -400,22 +401,24 @@ public class AuthController {
       }
 
       UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-      java.util.Optional<User> userOpt = userRepository.findById(userDetails.getId());
+      Long userId = userDetails.getId();
 
+      java.util.Optional<User> userOpt = userRepository.findById(userId);
       if (!userOpt.isPresent()) {
         return ResponseEntity.badRequest().body(new MessageResponse("Error: User not found."));
       }
 
       User user = userOpt.get();
+      String username = user.getUsername();
 
-      // Delete all related data first (foreign key constraints)
-      problemRepository.deleteAll(problemRepository.findByUser(user));
-      platformLinkRepository.deleteAll(platformLinkRepository.findByUser(user));
+      // Delete all related data first using native SQL (avoids entity column mismatch issues)
+      problemRepository.deleteAllByUserId(userId);
+      platformLinkRepository.deleteAllByUserId(userId);
 
       // Delete the user
       userRepository.delete(user);
 
-      logger.info("Account deleted for user: {} (ID: {})", user.getUsername(), user.getId());
+      logger.info("Account deleted for user: {} (ID: {})", username, userId);
 
       return ResponseEntity.ok(new MessageResponse("Account deleted successfully."));
     } catch (Exception e) {

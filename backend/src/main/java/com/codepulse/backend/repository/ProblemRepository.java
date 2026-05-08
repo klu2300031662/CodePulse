@@ -3,6 +3,7 @@ package com.codepulse.backend.repository;
 import com.codepulse.backend.models.Problem;
 import com.codepulse.backend.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -33,4 +34,8 @@ public interface ProblemRepository extends JpaRepository<Problem, Long> {
     
     @Query("SELECT DISTINCT p.dateSolved FROM Problem p WHERE p.user = :user ORDER BY p.dateSolved DESC")
     List<LocalDate> findDistinctSolvedDatesDesc(User user);
+
+    @Modifying
+    @Query(value = "DELETE FROM problems WHERE user_id = :userId", nativeQuery = true)
+    void deleteAllByUserId(Long userId);
 }
