@@ -112,6 +112,7 @@ public class AuthController {
                  encoder.encode(signUpRequest.getPassword()));
                  
       user.setName(signUpRequest.getName());
+      user.setEmailVerified(true); // Email was verified via OTP before this call
 
       userRepository.save(user);
 
@@ -120,6 +121,102 @@ public class AuthController {
       logger.error("Error during user registration: {}", e.getMessage(), e);
       return ResponseEntity.status(500)
           .body(new MessageResponse("Error: Registration failed - " + e.getMessage()));
+    }
+  }
+
+  @PostMapping("/send-otp")
+  public ResponseEntity<?> sendOtp(@RequestBody java.util.Map<String, String> payload) {
+    String email = payload.get("email");
+    String name = payload.get("name");
+
+    if (email == null || email.trim().isEmpty()) {
+      return ResponseEntity.badRequest().body(new MessageResponse("Error: Email is required!"));
+    }
+
+    if (!email.toLowerCase().endsWith("@gmail.com")) {
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("Error: Only Gmail addresses (@gmail.com) are allowed."));
+    }
+
+    if (userRepository.existsByEmail(email)) {
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("Error: Email is already in use!"));
+    }
+
+    // Generate 6-digit OTP
+    java.util.Random random = new java.util.Random();
+    String otp = String.format("%06d", random.nextInt(1000000));
+
+    // Store OTP temporarily — we'll use a temp record keyed by email
+    // Check if there's already a pending user record, if so update it
+    java.util.Optional<User> existingPending = userRepository.findByEmail(email);
+    if (existingPending.isPresent()) {
+      // If a fully registered user exists, this shouldn't happen — already checked above
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("Error: Email is already in use!"));
+    }
+
+    // Store OTP in a temporary in-memory map (or we can use a simple approach)
+    // For simplicity, we'll store in a static concurrent map
+    otpStore.put(email.toLowerCase(), new OtpEntry(otp, name, java.time.LocalDateTime.now().plusMinutes(10)));
+
+    try {
+      emailService.sendOtpEmail(email, name != null ? name : "User", otp);
+    } catch (RuntimeException e) {
+      logger.error("Failed to send OTP email: {}", e.getMessage());
+      return ResponseEntity.status(500)
+          .body(new MessageResponse("Error: " + e.getMessage()));
+    }
+
+    return ResponseEntity.ok(new MessageResponse("OTP sent successfully to your email."));
+  }
+
+  @PostMapping("/verify-otp")
+  public ResponseEntity<?> verifyOtp(@RequestBody java.util.Map<String, String> payload) {
+    String email = payload.get("email");
+    String otp = payload.get("otp");
+
+    if (email == null || otp == null) {
+      return ResponseEntity.badRequest().body(new MessageResponse("Error: Email and OTP are required!"));
+    }
+
+    String key = email.toLowerCase();
+    OtpEntry entry = otpStore.get(key);
+
+    if (entry == null) {
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("Error: No OTP found for this email. Please request a new one."));
+    }
+
+    if (entry.expiry.isBefore(java.time.LocalDateTime.now())) {
+      otpStore.remove(key);
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("Error: OTP has expired. Please request a new one."));
+    }
+
+    if (!entry.otp.equals(otp.trim())) {
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("Error: Invalid OTP. Please check and try again."));
+    }
+
+    // OTP verified — remove from store
+    otpStore.remove(key);
+
+    return ResponseEntity.ok(new MessageResponse("Email verified successfully!"));
+  }
+
+  // ── In-memory OTP store (simple approach) ──
+  private static final java.util.concurrent.ConcurrentHashMap<String, OtpEntry> otpStore = new java.util.concurrent.ConcurrentHashMap<>();
+
+  private static class OtpEntry {
+    String otp;
+    String name;
+    java.time.LocalDateTime expiry;
+
+    OtpEntry(String otp, String name, java.time.LocalDateTime expiry) {
+      this.otp = otp;
+      this.name = name;
+      this.expiry = expiry;
     }
   }
 

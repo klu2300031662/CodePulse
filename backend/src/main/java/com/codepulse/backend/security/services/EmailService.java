@@ -161,6 +161,120 @@ public class EmailService {
             + "</td></tr></table></td></tr></table></body></html>";
     }
 
+    /**
+     * Send an OTP verification email via Brevo HTTP API.
+     */
+    public void sendOtpEmail(String toEmail, String userName, String otpCode) {
+        String displayName = (userName != null && !userName.isBlank()) ? userName : "User";
+
+        String cleanKey = brevoApiKey.replaceAll("\\s+", "").trim();
+
+        if (cleanKey.isEmpty()) {
+            logger.error("BREVO_API_KEY is not configured!");
+            throw new RuntimeException("Email service not configured. Set BREVO_API_KEY on Render.");
+        }
+
+        logger.info("Sending OTP email to: {}", toEmail);
+
+        String htmlContent = buildOtpEmailTemplate(displayName, otpCode);
+
+        String uniqueId = java.util.UUID.randomUUID().toString();
+        String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, hh:mm a"));
+
+        String jsonBody = String.format("""
+            {
+              "sender": {"name": "%s", "email": "%s"},
+              "to": [{"email": "%s", "name": "%s"}],
+              "subject": "Verify Your CodePulse Account — %s",
+              "htmlContent": %s,
+              "headers": {
+                "X-Entity-Ref-ID": "%s",
+                "X-Mailer": "CodePulse/%s"
+              }
+            }
+            """,
+            escapeJson(fromName),
+            escapeJson(fromEmail),
+            escapeJson(toEmail),
+            escapeJson(displayName),
+            timestamp,
+            toJsonString(htmlContent),
+            uniqueId,
+            uniqueId
+        );
+
+        try {
+            URL url = new URL("https://api.brevo.com/v3/smtp/email");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(15000);
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("api-key", cleanKey);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
+                os.flush();
+            }
+
+            int status = conn.getResponseCode();
+            String responseBody;
+
+            if (status >= 200 && status < 300) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) sb.append(line);
+                    responseBody = sb.toString();
+                }
+                logger.info("OTP email sent successfully to {} — status: {}, response: {}", toEmail, status, responseBody);
+            } else {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null) sb.append(line);
+                    responseBody = sb.toString();
+                }
+                logger.error("Brevo API error for OTP — status: {}, response: {}", status, responseBody);
+                throw new RuntimeException("Email API returned " + status + ": " + responseBody);
+            }
+
+            conn.disconnect();
+
+        } catch (IOException e) {
+            logger.error("Failed to send OTP email to {}: {} — {}", toEmail, e.getClass().getSimpleName(), e.getMessage(), e);
+            throw new RuntimeException("Failed to send OTP email: " + e.getMessage());
+        }
+    }
+
+    private String buildOtpEmailTemplate(String userName, String otpCode) {
+        return "<!DOCTYPE html><html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'></head>"
+            + "<body style='margin:0;padding:0;background-color:#f4f4f8;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;'>"
+            + "<table width='100%' cellpadding='0' cellspacing='0' style='background-color:#f4f4f8;padding:40px 20px;'><tr><td align='center'>"
+            + "<table width='100%' cellpadding='0' cellspacing='0' style='max-width:520px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>"
+            // Header
+            + "<tr><td style='background:linear-gradient(135deg,#7c3aed,#3b82f6);padding:32px 40px;text-align:center;'>"
+            + "<h1 style='margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;'>&lt;/&gt; CodePulse</h1>"
+            + "<p style='margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:13px;'>Verify Your Email Address</p>"
+            + "</td></tr>"
+            // Body
+            + "<tr><td style='padding:36px 40px 24px;'>"
+            + "<h2 style='margin:0 0 8px;color:#1a1a2e;font-size:20px;font-weight:600;'>Email Verification</h2>"
+            + "<p style='margin:0 0 24px;color:#64748b;font-size:14px;line-height:1.6;'>Hi <strong style='color:#334155;'>" + escapeHtml(userName) + "</strong>, use the following OTP code to verify your email address and complete your registration.</p>"
+            // OTP Code
+            + "<table width='100%' cellpadding='0' cellspacing='0'><tr><td align='center' style='padding:8px 0 24px;'>"
+            + "<div style='display:inline-block;background:linear-gradient(135deg,#7c3aed,#3b82f6);color:#ffffff;padding:16px 40px;border-radius:12px;font-size:32px;font-weight:700;letter-spacing:8px;box-shadow:0 4px 14px rgba(124,58,237,0.3);'>" + otpCode + "</div>"
+            + "</td></tr></table>"
+            + "<p style='margin:0 0 16px;color:#94a3b8;font-size:12px;line-height:1.5;'>This code expires in <strong>10 minutes</strong>. If you didn't request this, ignore this email.</p>"
+            + "</td></tr>"
+            // Footer
+            + "<tr><td style='padding:20px 40px 28px;border-top:1px solid #f1f5f9;text-align:center;'>"
+            + "<p style='margin:0;color:#94a3b8;font-size:11px;'>&copy; 2026 CodePulse. Built for developers, by developers.</p>"
+            + "</td></tr></table></td></tr></table></body></html>";
+    }
+
     private String escapeHtml(String s) {
         if (s == null) return "User";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");

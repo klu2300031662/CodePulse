@@ -48,6 +48,15 @@ public class User {
 
     @Column(name = "reset_password_token_expiry")
     private LocalDateTime resetPasswordTokenExpiry;
+
+    @Column(name = "email_otp")
+    private String emailOtp;
+
+    @Column(name = "email_otp_expiry")
+    private LocalDateTime emailOtpExpiry;
+
+    @Column(name = "email_verified")
+    private Boolean emailVerified = false;
     
     public User(String username, String email, String password) {
         this.username = username;

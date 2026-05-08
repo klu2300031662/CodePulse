@@ -78,6 +78,36 @@ export const AuthService = {
     }
   },
 
+  sendOtp: async (data: { email: string; name: string }) => {
+    try {
+      const response = await api.post('auth/send-otp', data);
+      return response.data;
+    } catch (error: any) {
+      if (error.response) {
+        throw error;
+      } else if (error.request) {
+        throw new Error('Unable to reach the server. The backend may be starting up. Please try again.');
+      } else {
+        throw new Error('An unexpected error occurred. Please try again.');
+      }
+    }
+  },
+
+  verifyOtp: async (data: { email: string; otp: string }) => {
+    try {
+      const response = await api.post('auth/verify-otp', data);
+      return response.data;
+    } catch (error: any) {
+      if (error.response) {
+        throw error;
+      } else if (error.request) {
+        throw new Error('Unable to reach the server. Please try again.');
+      } else {
+        throw new Error('An unexpected error occurred. Please try again.');
+      }
+    }
+  },
+
   logout: () => {
     localStorage.removeItem('user');
     clearCachedSession();
