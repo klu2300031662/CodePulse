@@ -138,7 +138,8 @@ public class EmailService {
             + "<table width='100%' cellpadding='0' cellspacing='0' style='max-width:520px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>"
             // Header
             + "<tr><td style='background:linear-gradient(135deg,#7c3aed,#3b82f6);padding:32px 40px;text-align:center;'>"
-            + "<h1 style='margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;'>&lt;/&gt; CodePulse</h1>"
+            + "<img src='https://code-pulse-iota.vercel.app/logo.png' alt='CodePulse' width='40' height='40' style='display:inline-block;border-radius:10px;margin-bottom:10px;' />"
+            + "<h1 style='margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;'>CodePulse</h1>"
             + "<p style='margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:13px;'>Track, Analyze &amp; Master Your Coding Journey</p>"
             + "</td></tr>"
             // Body
@@ -256,7 +257,8 @@ public class EmailService {
             + "<table width='100%' cellpadding='0' cellspacing='0' style='max-width:520px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>"
             // Header
             + "<tr><td style='background:linear-gradient(135deg,#7c3aed,#3b82f6);padding:32px 40px;text-align:center;'>"
-            + "<h1 style='margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;'>&lt;/&gt; CodePulse</h1>"
+            + "<img src='https://code-pulse-iota.vercel.app/logo.png' alt='CodePulse' width='40' height='40' style='display:inline-block;border-radius:10px;margin-bottom:10px;' />"
+            + "<h1 style='margin:0;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;'>CodePulse</h1>"
             + "<p style='margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:13px;'>Verify Your Email Address</p>"
             + "</td></tr>"
             // Body

@@ -8,6 +8,7 @@ import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import GuestGate from "@/components/dashboard/GuestGate"
+import { AuthService } from "@/lib/api/auth.service"
 
 const HIDDEN_PLATFORMS_KEY = "codepulse_hidden_platforms"
 
@@ -52,6 +53,8 @@ export default function SettingsPage() {
   const [hiddenPlatforms, setHiddenState] = useState<string[]>([])
   const [notifPrefs, setNotifState] = useState<Record<string, boolean>>({ contests: true, streaks: true, badges: true, sync: true })
   const [deleteConfirm, setDeleteConfirm] = useState("")
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState("")
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
@@ -89,6 +92,20 @@ export default function SettingsPage() {
   const handleLogout = () => {
     logout()
     router.push("/")
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== "DELETE") return
+    setDeleteLoading(true)
+    setDeleteError("")
+    try {
+      await AuthService.deleteAccount()
+      logout()
+      router.push("/")
+    } catch (err: any) {
+      setDeleteError(err.response?.data?.message || err.message || "Failed to delete account. Please try again.")
+      setDeleteLoading(false)
+    }
   }
 
   return (
@@ -265,10 +282,20 @@ export default function SettingsPage() {
                     onChange={(e) => setDeleteConfirm(e.target.value)}
                     className="flex-1 px-3 py-2 text-sm rounded-lg border border-red-200 dark:border-red-800 bg-transparent outline-none focus:ring-2 focus:ring-red-500/20"
                   />
-                  <Button variant="destructive" size="sm" disabled={deleteConfirm !== "DELETE"} className="gap-1">
-                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={deleteConfirm !== "DELETE" || deleteLoading}
+                    onClick={handleDeleteAccount}
+                    className="gap-1"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {deleteLoading ? "Deleting..." : "Delete"}
                   </Button>
                 </div>
+                {deleteError && (
+                  <p className="text-xs text-red-500 mt-2">{deleteError}</p>
+                )}
               </div>
             </div>
           )}

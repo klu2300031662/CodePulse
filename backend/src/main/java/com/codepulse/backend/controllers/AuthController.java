@@ -5,6 +5,8 @@ import com.codepulse.backend.payload.request.LoginRequest;
 import com.codepulse.backend.payload.request.SignupRequest;
 import com.codepulse.backend.payload.response.JwtResponse;
 import com.codepulse.backend.payload.response.MessageResponse;
+import com.codepulse.backend.repository.PlatformLinkRepository;
+import com.codepulse.backend.repository.ProblemRepository;
 import com.codepulse.backend.repository.UserRepository;
 import com.codepulse.backend.security.jwt.JwtUtils;
 import com.codepulse.backend.security.services.EmailService;
@@ -44,6 +46,12 @@ public class AuthController {
 
   @Autowired
   EmailService emailService;
+
+  @Autowired
+  PlatformLinkRepository platformLinkRepository;
+
+  @Autowired
+  ProblemRepository problemRepository;
 
   @PostMapping("/signin")
   public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -380,6 +388,40 @@ public class AuthController {
     } catch (Exception e) {
         logger.error("Google authentication error: {}", e.getMessage(), e);
         return ResponseEntity.badRequest().body(new MessageResponse("Error: Google authentication failed - " + e.getMessage()));
+    }
+  }
+
+  @DeleteMapping("/delete-account")
+  public ResponseEntity<?> deleteAccount() {
+    try {
+      Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+      if (authentication == null || !authentication.isAuthenticated()) {
+        return ResponseEntity.status(401).body(new MessageResponse("Error: Not authenticated."));
+      }
+
+      UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+      java.util.Optional<User> userOpt = userRepository.findById(userDetails.getId());
+
+      if (!userOpt.isPresent()) {
+        return ResponseEntity.badRequest().body(new MessageResponse("Error: User not found."));
+      }
+
+      User user = userOpt.get();
+
+      // Delete all related data first (foreign key constraints)
+      problemRepository.deleteAll(problemRepository.findByUser(user));
+      platformLinkRepository.deleteAll(platformLinkRepository.findByUser(user));
+
+      // Delete the user
+      userRepository.delete(user);
+
+      logger.info("Account deleted for user: {} (ID: {})", user.getUsername(), user.getId());
+
+      return ResponseEntity.ok(new MessageResponse("Account deleted successfully."));
+    } catch (Exception e) {
+      logger.error("Error deleting account: {}", e.getMessage(), e);
+      return ResponseEntity.status(500)
+          .body(new MessageResponse("Error: Failed to delete account — " + e.getMessage()));
     }
   }
 }

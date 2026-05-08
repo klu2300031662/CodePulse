@@ -113,6 +113,23 @@ export const AuthService = {
     clearCachedSession();
   },
 
+  deleteAccount: async () => {
+    try {
+      const response = await api.delete('auth/delete-account');
+      localStorage.removeItem('user');
+      clearCachedSession();
+      return response.data;
+    } catch (error: any) {
+      if (error.response) {
+        throw error;
+      } else if (error.request) {
+        throw new Error('Unable to reach the server. Please try again.');
+      } else {
+        throw new Error('An unexpected error occurred. Please try again.');
+      }
+    }
+  },
+
   forgotPassword: async (data: any) => {
     try {
       // Longer timeout: SMTP on Render free tier can be slow
