@@ -38,43 +38,72 @@ export default function LoginPage() {
     setIsLoading(true);
     setShowOverlay(true);
 
-    try {
-      const userData = await AuthService.login({
-        username: formData.username,
-        password: formData.password,
-      });
-      storeLogin(userData);
-      router.push('/dashboard');
-    } catch (err: any) {
-      setShowOverlay(false);
-      setError(err.response?.data?.message || err.message || 'Invalid username or password. Please try again.');
-      captchaRef.current?.reset();
-      setCaptchaVerified(false);
-    } finally {
-      setIsLoading(false);
+    const maxRetries = 2;
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const userData = await AuthService.login({
+          username: formData.username,
+          password: formData.password,
+        });
+        storeLogin(userData);
+        router.push('/dashboard');
+        return; // Success — exit
+      } catch (err: any) {
+        lastError = err;
+        // Only retry on network/timeout errors, not on auth failures (4xx)
+        const isRetryable = !err.response && attempt < maxRetries;
+        if (isRetryable) {
+          // Wait briefly before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)));
+          continue;
+        }
+        break;
+      }
     }
+
+    setShowOverlay(false);
+    setError(lastError?.response?.data?.message || lastError?.message || 'Invalid username or password. Please try again.');
+    captchaRef.current?.reset();
+    setCaptchaVerified(false);
+    setIsLoading(false);
   };
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
     setShowOverlay(true);
     setError('');
-    try {
-      if (credentialResponse.credential) {
-        const userData = await AuthService.googleLogin(credentialResponse.credential);
-        storeLogin(userData);
-        router.push('/dashboard');
+
+    const maxRetries = 2;
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        if (credentialResponse.credential) {
+          const userData = await AuthService.googleLogin(credentialResponse.credential);
+          storeLogin(userData);
+          router.push('/dashboard');
+          return; // Success
+        }
+      } catch (err: any) {
+        lastError = err;
+        const isRetryable = !err.response && attempt < maxRetries;
+        if (isRetryable) {
+          await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)));
+          continue;
+        }
+        break;
       }
-    } catch (err: any) {
-      setShowOverlay(false);
-      setError(err.response?.data?.message || err.message || 'Google Sign In failed.');
-    } finally {
-      setIsLoading(false);
     }
+
+    setShowOverlay(false);
+    setError(lastError?.response?.data?.message || lastError?.message || 'Google Sign In failed. Please try again.');
+    setIsLoading(false);
   };
 
   const handleGoogleError = () => {
-    setError('Google Sign In was unsuccessful.');
+    setError('Google Sign In was unsuccessful. This may be caused by browser privacy settings or extensions blocking Google\'s authentication. Try disabling ad-blockers or using an incognito window.');
   };
 
   const handleGuestLogin = () => {

@@ -8,7 +8,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/contests")
-@CrossOrigin(origins = "*")
 public class ContestController {
 
     private final RestTemplate restTemplate = new RestTemplate();

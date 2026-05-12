@@ -160,21 +160,35 @@ export default function RegisterPage() {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
     setError('');
-    try {
-      if (credentialResponse.credential) {
-        const userData = await AuthService.googleLogin(credentialResponse.credential);
-        storeLogin(userData);
-        router.push('/dashboard');
+
+    const maxRetries = 2;
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        if (credentialResponse.credential) {
+          const userData = await AuthService.googleLogin(credentialResponse.credential);
+          storeLogin(userData);
+          router.push('/dashboard');
+          return;
+        }
+      } catch (err: any) {
+        lastError = err;
+        const isRetryable = !err.response && attempt < maxRetries;
+        if (isRetryable) {
+          await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)));
+          continue;
+        }
+        break;
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Google Sign In failed.');
-    } finally {
-      setIsLoading(false);
     }
+
+    setError(lastError?.response?.data?.message || lastError?.message || 'Google Sign In failed. Please try again.');
+    setIsLoading(false);
   }
 
   const handleGoogleError = () => {
-    setError('Google Sign In was unsuccessful.');
+    setError('Google Sign In was unsuccessful. This may be caused by browser privacy settings or extensions blocking Google\'s authentication. Try disabling ad-blockers or using an incognito window.');
   }
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;

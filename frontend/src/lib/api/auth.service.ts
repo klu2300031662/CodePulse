@@ -1,4 +1,5 @@
 import api from './axios';
+import axios from 'axios';
 
 // ── Session token cache helpers ──
 const SESSION_CACHE_KEY = 'cp_session_cache';
@@ -38,6 +39,43 @@ function clearCachedSession(): void {
   localStorage.removeItem(SESSION_CACHE_KEY);
 }
 
+/**
+ * Centralized error handler for all auth service calls.
+ * Provides detailed, actionable error messages instead of generic "An unexpected error occurred."
+ */
+function handleAuthError(error: any, context: string): Error {
+  // 1. Server responded with an HTTP error (4xx, 5xx) — pass through as-is
+  if (error.response) {
+    return error;
+  }
+
+  // 2. Request was made but no response received (network/CORS/timeout/backend down)
+  if (error.request) {
+    // Check for timeout specifically
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      return new Error(
+        `${context} timed out. The server may be starting up (Render free tier can take ~30 seconds). Please wait a moment and try again.`
+      );
+    }
+    // CORS or network error (ERR_NETWORK in Chrome)
+    if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+      return new Error(
+        `Unable to connect to the server. This can happen if the backend is waking up, or if a browser extension (like an ad-blocker) is blocking the request. Please try disabling extensions or try again in a few seconds.`
+      );
+    }
+    return new Error(
+      `Unable to reach the server. The backend may be starting up — please wait a few seconds and try again.`
+    );
+  }
+
+  // 3. Error occurred during request setup (before the request was sent)
+  // This is the "An unexpected error occurred" case — provide real diagnostics
+  console.error(`[CodePulse] ${context} setup error:`, error.message, error);
+  return new Error(
+    `${context} failed due to a connection issue. Please check your internet connection, try disabling browser extensions, or refresh the page and try again.`
+  );
+}
+
 export const AuthService = {
   login: async (data: any) => {
     try {
@@ -50,16 +88,9 @@ export const AuthService = {
       }
       return response.data;
     } catch (error: any) {
-      // Re-throw with better error info
-      if (error.response) {
-        // Server responded with error status
-        throw error;
-      } else if (error.request) {
-        // Request was made but no response (network error, CORS, backend down)
-        throw new Error('Unable to reach the server. The backend may be starting up (Render free tier can take ~30 seconds). Please try again.');
-      } else {
-        throw new Error('An unexpected error occurred. Please try again.');
-      }
+      // Silently ignore cancelled requests (guest mode)
+      if (axios.isCancel(error)) throw error;
+      throw handleAuthError(error, 'Login');
     }
   },
 
@@ -68,13 +99,8 @@ export const AuthService = {
       const response = await api.post('auth/signup', data);
       return response.data;
     } catch (error: any) {
-      if (error.response) {
-        throw error;
-      } else if (error.request) {
-        throw new Error('Unable to reach the server. The backend may be starting up (Render free tier can take ~30 seconds). Please try again.');
-      } else {
-        throw new Error('An unexpected error occurred. Please try again.');
-      }
+      if (axios.isCancel(error)) throw error;
+      throw handleAuthError(error, 'Registration');
     }
   },
 
@@ -83,13 +109,8 @@ export const AuthService = {
       const response = await api.post('auth/send-otp', data);
       return response.data;
     } catch (error: any) {
-      if (error.response) {
-        throw error;
-      } else if (error.request) {
-        throw new Error('Unable to reach the server. The backend may be starting up. Please try again.');
-      } else {
-        throw new Error('An unexpected error occurred. Please try again.');
-      }
+      if (axios.isCancel(error)) throw error;
+      throw handleAuthError(error, 'OTP');
     }
   },
 
@@ -98,13 +119,8 @@ export const AuthService = {
       const response = await api.post('auth/verify-otp', data);
       return response.data;
     } catch (error: any) {
-      if (error.response) {
-        throw error;
-      } else if (error.request) {
-        throw new Error('Unable to reach the server. Please try again.');
-      } else {
-        throw new Error('An unexpected error occurred. Please try again.');
-      }
+      if (axios.isCancel(error)) throw error;
+      throw handleAuthError(error, 'OTP verification');
     }
   },
 
@@ -120,13 +136,8 @@ export const AuthService = {
       clearCachedSession();
       return response.data;
     } catch (error: any) {
-      if (error.response) {
-        throw error;
-      } else if (error.request) {
-        throw new Error('Unable to reach the server. Please try again.');
-      } else {
-        throw new Error('An unexpected error occurred. Please try again.');
-      }
+      if (axios.isCancel(error)) throw error;
+      throw handleAuthError(error, 'Account deletion');
     }
   },
 
@@ -136,13 +147,8 @@ export const AuthService = {
       const response = await api.post('auth/forgot-password', data, { timeout: 60000 });
       return response.data;
     } catch (error: any) {
-      if (error.response) {
-        throw error;
-      } else if (error.request) {
-        throw new Error('The server is taking too long to respond. It may be waking up — please wait 30 seconds and try again.');
-      } else {
-        throw new Error('An unexpected error occurred. Please try again.');
-      }
+      if (axios.isCancel(error)) throw error;
+      throw handleAuthError(error, 'Password reset');
     }
   },
 
@@ -151,13 +157,8 @@ export const AuthService = {
       const response = await api.post('auth/reset-password', data);
       return response.data;
     } catch (error: any) {
-      if (error.response) {
-        throw error;
-      } else if (error.request) {
-        throw new Error('Unable to reach the server. Please try again.');
-      } else {
-        throw new Error('An unexpected error occurred. Please try again.');
-      }
+      if (axios.isCancel(error)) throw error;
+      throw handleAuthError(error, 'Password reset');
     }
   },
 
@@ -166,13 +167,8 @@ export const AuthService = {
       const response = await api.get(`auth/validate-reset-token?token=${encodeURIComponent(token)}`);
       return response.data;
     } catch (error: any) {
-      if (error.response) {
-        throw error;
-      } else if (error.request) {
-        throw new Error('Unable to reach the server. Please try again.');
-      } else {
-        throw new Error('An unexpected error occurred. Please try again.');
-      }
+      if (axios.isCancel(error)) throw error;
+      throw handleAuthError(error, 'Token validation');
     }
   },
 
@@ -185,13 +181,8 @@ export const AuthService = {
       }
       return response.data;
     } catch (error: any) {
-      if (error.response) {
-        throw error;
-      } else if (error.request) {
-        throw new Error('Unable to reach the server. Please try again.');
-      } else {
-        throw new Error('An unexpected error occurred. Please try again.');
-      }
+      if (axios.isCancel(error)) throw error;
+      throw handleAuthError(error, 'Google Sign In');
     }
   },
 
