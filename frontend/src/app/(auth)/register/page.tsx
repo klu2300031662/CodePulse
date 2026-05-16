@@ -8,10 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthService } from '@/lib/api/auth.service';
 import { useAuthStore } from '@/lib/store/auth.store';
-import { Eye, EyeOff, Check, X, ArrowRight, Mail, Lock, User, AtSign, ShieldCheck, Loader2, ArrowLeft, Sparkles, Users } from 'lucide-react';
+import { Eye, EyeOff, Check, X, ArrowRight, ShieldCheck, Loader2, ArrowLeft, Users } from 'lucide-react';
 import Image from 'next/image';
 import { GoogleLogin } from '@react-oauth/google';
-import CaptchaBox, { type CaptchaHandle } from '@/components/CaptchaBox';
 
 type Step = 'form' | 'otp';
 
@@ -24,8 +23,6 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaVerified, setCaptchaVerified] = useState(false);
-  const captchaRef = useRef<CaptchaHandle>(null);
 
   // OTP state
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
@@ -66,11 +63,6 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!captchaVerified) {
-      setError('Please complete the security captcha first.');
-      return;
-    }
-
     setOtpSending(true);
     try {
       await AuthService.sendOtp({ email: formData.email, name: formData.name });
@@ -80,8 +72,6 @@ export default function RegisterPage() {
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Failed to send OTP. Please try again.');
-      captchaRef.current?.reset();
-      setCaptchaVerified(false);
     } finally {
       setOtpSending(false);
     }
@@ -202,7 +192,7 @@ export default function RegisterPage() {
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   return (
-    <div className="fixed inset-0 flex bg-zinc-50 dark:bg-[#050510] overflow-hidden">
+    <div className="fixed inset-0 flex bg-[#050510] overflow-hidden">
 
       {/* ═══ LEFT PANEL — Form ═══ */}
       <div className="flex-1 flex items-center justify-center relative overflow-y-auto">
@@ -217,99 +207,96 @@ export default function RegisterPage() {
           <div className="mb-5 flex flex-col items-center gap-1.5 lg:hidden">
             <div className="flex items-center gap-2">
               <Image src="/logo.png" alt="CodePulse" width={34} height={34} className="rounded-lg shadow-md" />
-              <span className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-blue-600 dark:from-violet-400 dark:to-blue-400">CodePulse</span>
+              <span className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-blue-400">CodePulse</span>
             </div>
-            <p className="text-xs text-muted-foreground">Track, Analyze & Master Your Coding Journey</p>
+            <p className="text-xs text-zinc-500">Track, Analyze & Master Your Coding Journey</p>
           </div>
 
           {step === 'form' ? (
             <>
-              {/* Header */}
-              <div className="mb-6">
-                <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">Create Account</h2>
-                <p className="text-muted-foreground mt-1.5 uppercase tracking-[0.15em] text-[11px] font-medium">Enter your information to get started</p>
+              <div className="mb-4">
+                <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-white">Create Account</h2>
+                <p className="text-zinc-500 mt-1 uppercase tracking-[0.15em] text-[11px] font-medium">Enter your information to get started</p>
               </div>
 
-              <form onSubmit={(e) => { e.preventDefault(); handleSendOtp(); }} className="space-y-4" autoComplete="off">
-                {/* Name */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="reg-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Name</Label>
-                  <Input id="reg-name" name="reg-name" placeholder="John Doe" value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })} required autoComplete="off"
-                    className="h-12 text-sm bg-white dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-400 dark:placeholder:text-zinc-600 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-700" />
+              <form onSubmit={(e) => { e.preventDefault(); handleSendOtp(); }} className="space-y-3" autoComplete="off">
+                {/* Name & Username row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="reg-name" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Full Name</Label>
+                    <Input id="reg-name" name="reg-name" placeholder="John Doe" value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })} required autoComplete="off"
+                      className="h-10 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-600 transition-all duration-300 hover:border-zinc-700" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="reg-username" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Username</Label>
+                    <Input id="reg-username" name="reg-username" placeholder="developer123" value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })} required autoComplete="off"
+                      className="h-10 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-600 transition-all duration-300 hover:border-zinc-700" />
+                  </div>
                 </div>
 
                 {/* Email */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="reg-email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="reg-email" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Email</Label>
                   <Input id="reg-email" name="reg-email" type="email" placeholder="name@gmail.com" value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })} required autoComplete="off"
-                    className="h-12 text-sm bg-white dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-400 dark:placeholder:text-zinc-600" />
+                    className="h-10 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-600 transition-all duration-300 hover:border-zinc-700" />
                 </div>
 
-                {/* Username */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="reg-username" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Username</Label>
-                  <Input id="reg-username" name="reg-username" placeholder="developer123" value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })} required autoComplete="off"
-                    className="h-12 text-sm bg-white dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-400 dark:placeholder:text-zinc-600" />
-                </div>
-
-                {/* Password */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="reg-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Password</Label>
-                  <div className="relative">
-                    <Input id="reg-password" name="reg-password" type={showPassword ? "text" : "password"} placeholder="••••••••"
-                      value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required autoComplete="new-password"
-                      className="h-12 pr-11 text-sm bg-white dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-400 dark:placeholder:text-zinc-600" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" tabIndex={-1}>
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                {/* Password & Confirm row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="reg-password" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Password</Label>
+                    <div className="relative">
+                      <Input id="reg-password" name="reg-password" type={showPassword ? "text" : "password"} placeholder="Min 6 chars"
+                        value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required autoComplete="new-password"
+                        className="h-10 pr-10 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-600" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors" tabIndex={-1}>
+                        {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="reg-confirm-password" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Confirm</Label>
+                    <div className="relative">
+                      <Input id="reg-confirm-password" name="reg-confirm-password" type={showConfirmPassword ? "text" : "password"} placeholder="Re-enter"
+                        value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} required autoComplete="new-password"
+                        className="h-10 pr-10 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-600" />
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors" tabIndex={-1}>
+                        {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Password checks */}
                 {formData.password.length > 0 && (
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 px-1">
+                  <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 px-1">
                     {[
-                      { key: 'length' as const, label: '6+ characters' },
-                      { key: 'letter' as const, label: 'Has letter' },
-                      { key: 'number' as const, label: 'Has number' },
-                      { key: 'special' as const, label: 'Special char' },
+                      { key: 'length' as const, label: '6+ chars' },
+                      { key: 'letter' as const, label: 'Letter' },
+                      { key: 'number' as const, label: 'Number' },
+                      { key: 'special' as const, label: 'Special' },
                     ].map(({ key, label }) => (
-                      <div key={key} className="flex items-center gap-1.5 text-[11px]">
-                        {passwordChecks[key] ? <Check className="h-3 w-3 text-emerald-500 shrink-0" /> : <X className="h-3 w-3 text-muted-foreground/40 shrink-0" />}
-                        <span className={passwordChecks[key] ? 'text-emerald-500' : 'text-muted-foreground/60'}>{label}</span>
+                      <div key={key} className="flex items-center gap-1 text-[10px]">
+                        {passwordChecks[key] ? <Check className="h-2.5 w-2.5 text-emerald-500 shrink-0" /> : <X className="h-2.5 w-2.5 text-zinc-600 shrink-0" />}
+                        <span className={passwordChecks[key] ? 'text-emerald-500' : 'text-zinc-600'}>{label}</span>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Confirm Password */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="reg-confirm-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Confirm Password</Label>
-                  <div className="relative">
-                    <Input id="reg-confirm-password" name="reg-confirm-password" type={showConfirmPassword ? "text" : "password"} placeholder="Re-enter password"
-                      value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} required autoComplete="new-password"
-                      className="h-12 pr-11 text-sm bg-white dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-400 dark:placeholder:text-zinc-600" />
-                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" tabIndex={-1}>
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <CaptchaBox ref={captchaRef} onVerify={(v) => { setCaptchaVerified(v); if (v) setError(''); }} className="my-0.5" />
-
                 {error && (
-                  <div className="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200/60 dark:border-red-500/20 px-4 py-3">
-                    <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                  <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5">
+                    <p className="text-xs text-red-400">{error}</p>
                   </div>
                 )}
 
                 <Button type="submit" disabled={otpSending}
-                  className="w-full h-12 font-semibold text-sm uppercase tracking-wider bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white rounded-xl shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 transition-all duration-300 border-0 hover:scale-[1.01]">
+                  className="w-full h-11 font-semibold text-sm uppercase tracking-wider bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white rounded-xl shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 transition-all duration-300 border-0 hover:scale-[1.01]">
                   {otpSending ? (
                     <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Sending OTP...</span>
                   ) : (
@@ -319,10 +306,10 @@ export default function RegisterPage() {
               </form>
 
               {/* Divider */}
-              <div className="relative my-5">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-200 dark:border-zinc-800" /></div>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-800" /></div>
                 <div className="relative flex justify-center text-[10px] uppercase tracking-[0.15em]">
-                  <span className="bg-zinc-50 dark:bg-[#060611] px-4 text-muted-foreground font-medium">Or continue with</span>
+                  <span className="bg-[#050510] px-4 text-zinc-500 font-medium">Or continue with</span>
                 </div>
               </div>
 
@@ -330,21 +317,21 @@ export default function RegisterPage() {
                 <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} text="signup_with" theme="outline" size="large" shape="rectangular" width="100%" />
               </div>
 
-              <p className="text-sm text-muted-foreground mt-5">
+              <p className="text-sm text-zinc-500 mt-4">
                 Already have an account?{' '}
-                <Link href="/login" className="font-semibold text-violet-600 dark:text-violet-400 hover:underline transition-colors">Sign in</Link>
+                <Link href="/login" className="font-semibold text-violet-400 hover:underline transition-colors">Sign in</Link>
               </p>
             </>
           ) : (
             /* ═══ OTP Verification Step ═══ */
             <>
-              <div className="text-center mb-8">
-                <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/10 to-blue-500/10 dark:from-violet-500/20 dark:to-blue-500/20 flex items-center justify-center mb-5 border border-violet-200/30 dark:border-violet-500/10">
-                  <ShieldCheck className="h-8 w-8 text-violet-600 dark:text-violet-400" />
+              <div className="text-center mb-6">
+                <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-blue-500/20 flex items-center justify-center mb-4 border border-violet-500/10">
+                  <ShieldCheck className="h-7 w-7 text-violet-400" />
                 </div>
-                <h2 className="text-2xl font-bold tracking-tight">Verify your email</h2>
-                <p className="text-sm text-muted-foreground mt-2">
-                  We sent a 6-digit code to <span className="font-medium text-foreground">{formData.email}</span>
+                <h2 className="text-2xl font-bold tracking-tight text-white">Verify your email</h2>
+                <p className="text-sm text-zinc-500 mt-2">
+                  We sent a 6-digit code to <span className="font-medium text-white">{formData.email}</span>
                 </p>
               </div>
 

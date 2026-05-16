@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,6 @@ import { Eye, EyeOff, ArrowRight, UserCircle2, ArrowLeft, Sparkles } from 'lucid
 import Image from 'next/image';
 import { GoogleLogin } from '@react-oauth/google';
 import LoadingOverlay from '@/components/LoadingOverlay';
-import CaptchaBox, { type CaptchaHandle } from '@/components/CaptchaBox';
 
 /* ── Floating particle background ── */
 function FloatingParticles() {
@@ -90,8 +89,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
-  const [captchaVerified, setCaptchaVerified] = useState(false);
-  const captchaRef = useRef<CaptchaHandle>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -99,11 +96,6 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (!captchaVerified) {
-      setError('Please complete the security captcha first.');
-      return;
-    }
 
     // Clear any stale auth data that could interfere with the login request
     // (e.g., expired tokens, leftover guest mode state from previous sessions)
@@ -145,8 +137,6 @@ export default function LoginPage() {
       || lastError?.message
       || 'Invalid username or password. Please try again.';
     setError(errMsg);
-    captchaRef.current?.reset();
-    setCaptchaVerified(false);
     setIsLoading(false);
   };
 
@@ -206,7 +196,7 @@ export default function LoginPage() {
     <>
       <LoadingOverlay isVisible={showOverlay} />
 
-      <div className={`fixed inset-0 flex bg-zinc-50 dark:bg-[#050510] overflow-hidden transition-opacity duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`fixed inset-0 flex bg-[#050510] overflow-hidden transition-opacity duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
 
         {/* ═══ LEFT PANEL — Immersive Brand Showcase ═══ */}
         <div className="hidden lg:flex lg:w-[52%] relative overflow-hidden bg-[#050510]">
@@ -270,7 +260,7 @@ export default function LoginPage() {
         </div>
 
         {/* ═══ RIGHT PANEL — Sign In Form ═══ */}
-        <div className="flex-1 flex items-center justify-center relative overflow-y-auto">
+        <div className="flex-1 flex items-center justify-center relative overflow-hidden">
           {/* Background decoration for mobile */}
           <div className="pointer-events-none absolute inset-0 lg:hidden">
             <div className="absolute -top-32 -right-32 h-[400px] w-[400px] rounded-full bg-violet-500/[0.06] blur-[100px] animate-pulse" />
@@ -285,9 +275,9 @@ export default function LoginPage() {
             <div className="mb-6 flex flex-col items-center gap-1.5 lg:hidden">
               <div className="flex items-center gap-2">
                 <Image src="/logo.png" alt="CodePulse" width={34} height={34} className="rounded-lg shadow-md" />
-                <span className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-blue-600 dark:from-violet-400 dark:to-blue-400">CodePulse</span>
+                <span className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-blue-400">CodePulse</span>
               </div>
-              <p className="text-xs text-muted-foreground">Track, Analyze & Master Your Coding Journey</p>
+              <p className="text-xs text-zinc-500">Track, Analyze & Master Your Coding Journey</p>
             </div>
 
             {/* Header */}
@@ -312,17 +302,17 @@ export default function LoginPage() {
             </div>
 
             {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-200 dark:border-zinc-800" /></div>
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-800" /></div>
               <div className="relative flex justify-center text-[10px] uppercase tracking-[0.15em]">
-                <span className="bg-zinc-50 dark:bg-[#050510] px-4 text-muted-foreground font-medium">Or sign in with email</span>
+                <span className="bg-[#050510] px-4 text-zinc-500 font-medium">Or sign in with email</span>
               </div>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
+            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
               <div className="space-y-1.5">
-                <Label htmlFor="login-username" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Username or Email</Label>
+                <Label htmlFor="login-username" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Username or Email</Label>
                 <div className="relative group">
                   <Input
                     id="login-username"
@@ -332,15 +322,15 @@ export default function LoginPage() {
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     required
                     autoComplete="username"
-                    className="h-12 text-sm bg-white dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl transition-all duration-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 hover:border-zinc-300 dark:hover:border-zinc-700"
+                    className="h-11 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl transition-all duration-300 placeholder:text-zinc-600 hover:border-zinc-700"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="login-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Password</Label>
-                  <Link href="/forgot-password" className="text-[11px] text-violet-600 dark:text-violet-400 hover:text-violet-500 uppercase tracking-wider font-medium transition-colors">
+                  <Label htmlFor="login-password" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Password</Label>
+                  <Link href="/forgot-password" className="text-[11px] text-violet-400 hover:text-violet-300 uppercase tracking-wider font-medium transition-colors">
                     Forgot?
                   </Link>
                 </div>
@@ -354,12 +344,12 @@ export default function LoginPage() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
                     autoComplete="current-password"
-                    className="h-12 pr-11 text-sm bg-white dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl transition-all duration-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 hover:border-zinc-300 dark:hover:border-zinc-700"
+                    className="h-11 pr-11 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl transition-all duration-300 placeholder:text-zinc-600 hover:border-zinc-700"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -367,16 +357,9 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Captcha */}
-              <CaptchaBox
-                ref={captchaRef}
-                onVerify={(v) => { setCaptchaVerified(v); if (v) setError(''); }}
-                className="my-0.5"
-              />
-
               {error && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200/60 dark:border-red-500/20 px-4 py-3 animate-in slide-in-from-top-2">
-                  <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 animate-in slide-in-from-top-2">
+                  <p className="text-xs text-red-400">{error}</p>
                 </div>
               )}
 
@@ -398,16 +381,16 @@ export default function LoginPage() {
               id="guest-login-btn"
               type="button"
               onClick={handleGuestLogin}
-              className="group w-full flex items-center justify-center gap-2 mt-4 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 bg-transparent px-4 py-3 text-sm font-medium text-zinc-500 dark:text-zinc-500 transition-all duration-300 hover:border-violet-400/40 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50/50 dark:hover:bg-violet-500/[0.04]"
+              className="group w-full flex items-center justify-center gap-2 mt-3 rounded-xl border border-dashed border-zinc-800 bg-transparent px-4 py-2.5 text-sm font-medium text-zinc-500 transition-all duration-300 hover:border-violet-400/40 hover:text-violet-400 hover:bg-violet-500/[0.04]"
             >
               <UserCircle2 className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
               Continue as Guest
             </button>
 
             {/* Footer link */}
-            <p className="text-sm text-muted-foreground mt-6 text-center">
+            <p className="text-sm text-zinc-500 mt-5 text-center">
               New user?{' '}
-              <Link href="/register" className="font-semibold text-violet-600 dark:text-violet-400 hover:underline transition-colors">
+              <Link href="/register" className="font-semibold text-violet-400 hover:underline transition-colors">
                 Create an account
               </Link>
             </p>
