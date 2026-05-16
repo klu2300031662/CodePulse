@@ -1,11 +1,17 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
-import { Terminal, Target, BarChart3, Presentation, Trophy, ArrowRight, Sparkles, Zap, Code2, ChevronRight } from "lucide-react"
+import { Terminal, Target, BarChart3, Presentation, Trophy, ArrowRight, Sparkles, Zap, Code2, ChevronRight, Sun, Moon } from "lucide-react"
+import { useTheme } from "next-themes"
 
 export default function Home() {
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   return (
     <div className="flex flex-col min-h-screen bg-transparent overflow-x-hidden">
       
@@ -19,6 +25,17 @@ export default function Home() {
           <Link href="/login">
             <Button variant="ghost" size="sm" className="font-medium">Sign In</Button>
           </Link>
+          {/* Theme toggle */}
+          {mounted && (
+            <button
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              className="relative h-9 w-9 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-violet-600 dark:hover:text-violet-400 hover:border-violet-300 dark:hover:border-violet-500/30 transition-all duration-300 shadow-sm hover:shadow-md"
+              aria-label="Toggle theme"
+            >
+              <Sun className="h-4 w-4 dark:hidden transition-transform duration-300 hover:rotate-45" />
+              <Moon className="h-4 w-4 hidden dark:block transition-transform duration-300 hover:-rotate-12" />
+            </button>
+          )}
           <Link href="/register">
             <Button size="sm" className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 transition-all duration-300 border-0">
               Get Started <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
