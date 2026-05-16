@@ -27,21 +27,28 @@ function isGuestUser(): boolean {
 // ── Request Interceptor: Attach JWT token OR cancel for guest users ──
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
+    // Don't attach tokens to auth endpoints — these are public and
+    // stale tokens from previous sessions can interfere with fresh login
+    const isAuthEndpoint = config.url?.startsWith('auth/');
+
     const userStr = localStorage.getItem('user');
 
     if (userStr) {
       const user = JSON.parse(userStr);
 
       if (user.isGuest) {
-        // Guest users should never hit the real API.
-        // Cancel the request with a silent error that components can catch gracefully.
-        const cancelSource = axios.CancelToken.source();
-        config.cancelToken = cancelSource.token;
-        cancelSource.cancel('Guest mode — API call skipped');
-        return config;
+        // Guest users should never hit the real API — except auth endpoints
+        // (they might be logging in to upgrade from guest to real account)
+        if (!isAuthEndpoint) {
+          const cancelSource = axios.CancelToken.source();
+          config.cancelToken = cancelSource.token;
+          cancelSource.cancel('Guest mode — API call skipped');
+          return config;
+        }
       }
 
-      if (user.token) {
+      // Only attach token to non-auth endpoints
+      if (user.token && !isAuthEndpoint) {
         config.headers.Authorization = `Bearer ${user.token}`;
       }
     }

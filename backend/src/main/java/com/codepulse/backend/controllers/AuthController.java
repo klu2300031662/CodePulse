@@ -59,6 +59,9 @@ public class AuthController {
   @PostMapping("/signin")
   public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
     try {
+      // Clear any stale security context before fresh authentication
+      SecurityContextHolder.clearContext();
+
       Authentication authentication = authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
@@ -67,11 +70,20 @@ public class AuthController {
       
       UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();    
 
-      // Look up the full user to get the name
+      // Look up the full user to get the name — wrapped safely
       String name = null;
-      java.util.Optional<User> userOpt = userRepository.findByUsername(userDetails.getUsername());
-      if (userOpt.isPresent()) {
-        name = userOpt.get().getName();
+      try {
+        java.util.Optional<User> userOpt = userRepository.findByUsername(userDetails.getUsername());
+        if (userOpt.isEmpty()) {
+          // Fallback: user may have logged in with email, try email lookup
+          userOpt = userRepository.findByEmail(userDetails.getEmail());
+        }
+        if (userOpt.isPresent()) {
+          name = userOpt.get().getName();
+        }
+      } catch (Exception nameEx) {
+        // Non-fatal — log but don't fail the login
+        logger.warn("Could not fetch display name for user '{}': {}", userDetails.getUsername(), nameEx.getMessage());
       }
 
       return ResponseEntity.ok(new JwtResponse(jwt, 
@@ -90,7 +102,7 @@ public class AuthController {
     } catch (Exception e) {
       logger.error("Unexpected error during signin for user '{}': {}", loginRequest.getUsername(), e.getMessage(), e);
       return ResponseEntity.status(500)
-          .body(new MessageResponse("Error: Login failed due to server error. Please try again later."));
+          .body(new MessageResponse("Error: Login failed due to a server error. Please try again in a moment."));
     }
   }
 

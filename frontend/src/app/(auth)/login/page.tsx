@@ -35,6 +35,11 @@ export default function LoginPage() {
       return;
     }
 
+    // Clear any stale auth data that could interfere with the login request
+    // (e.g., expired tokens, leftover guest mode state from previous sessions)
+    localStorage.removeItem('user');
+    localStorage.removeItem('cp_session_cache');
+
     setIsLoading(true);
     setShowOverlay(true);
 
@@ -44,7 +49,7 @@ export default function LoginPage() {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const userData = await AuthService.login({
-          username: formData.username,
+          username: formData.username.trim(),
           password: formData.password,
         });
         storeLogin(userData);
@@ -64,13 +69,22 @@ export default function LoginPage() {
     }
 
     setShowOverlay(false);
-    setError(lastError?.response?.data?.message || lastError?.message || 'Invalid username or password. Please try again.');
+    // Extract error message — handle both MessageResponse and ErrorResponse formats
+    const errMsg = lastError?.response?.data?.message
+      || lastError?.backendMessage
+      || lastError?.message
+      || 'Invalid username or password. Please try again.';
+    setError(errMsg);
     captchaRef.current?.reset();
     setCaptchaVerified(false);
     setIsLoading(false);
   };
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
+    // Clear stale auth data before fresh login
+    localStorage.removeItem('user');
+    localStorage.removeItem('cp_session_cache');
+
     setIsLoading(true);
     setShowOverlay(true);
     setError('');
@@ -98,7 +112,11 @@ export default function LoginPage() {
     }
 
     setShowOverlay(false);
-    setError(lastError?.response?.data?.message || lastError?.message || 'Google Sign In failed. Please try again.');
+    const errMsg = lastError?.response?.data?.message
+      || lastError?.backendMessage
+      || lastError?.message
+      || 'Google Sign In failed. Please try again.';
+    setError(errMsg);
     setIsLoading(false);
   };
 

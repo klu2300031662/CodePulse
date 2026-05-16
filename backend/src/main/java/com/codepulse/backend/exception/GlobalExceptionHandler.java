@@ -7,8 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -89,32 +87,11 @@ public class GlobalExceptionHandler {
     // ──────────────────────────────────────────────
     // Spring Security Exceptions
     // ──────────────────────────────────────────────
-
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentials(
-            BadCredentialsException ex, HttpServletRequest request) {
-        logger.warn("Bad credentials: [path={}]", request.getRequestURI());
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.UNAUTHORIZED.value(),
-                "Unauthorized",
-                "Invalid username/email or password.",
-                request.getRequestURI()
-        );
-        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
-    }
-
-    @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ErrorResponse> handleAuthenticationException(
-            AuthenticationException ex, HttpServletRequest request) {
-        logger.warn("Authentication failed: {} [path={}]", ex.getMessage(), request.getRequestURI());
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.UNAUTHORIZED.value(),
-                "Unauthorized",
-                "Authentication failed: " + ex.getMessage(),
-                request.getRequestURI()
-        );
-        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
-    }
+    // NOTE: BadCredentialsException and AuthenticationException are handled
+    // directly inside AuthController.authenticateUser() with proper try/catch.
+    // We intentionally do NOT add @ExceptionHandler methods for them here
+    // to avoid conflicting response formats when the controller already
+    // returns its own ResponseEntity for these cases.
 
     // ──────────────────────────────────────────────
     // Validation Exceptions
