@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthService } from '@/lib/api/auth.service';
 import { useAuthStore } from '@/lib/store/auth.store';
-import { Eye, EyeOff, ArrowRight, UserCircle2, ArrowLeft, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, UserCircle2, ArrowLeft, Sparkles, Sun, Moon } from 'lucide-react';
 import Image from 'next/image';
 import { GoogleLogin } from '@react-oauth/google';
 import LoadingOverlay from '@/components/LoadingOverlay';
+import { useTheme } from 'next-themes';
 
 /* ── Floating particle background ── */
 function FloatingParticles() {
@@ -84,6 +85,7 @@ export default function LoginPage() {
   const router = useRouter();
   const storeLogin = useAuthStore((state) => state.login);
   const loginAsGuest = useAuthStore((state) => state.loginAsGuest);
+  const { theme, setTheme } = useTheme();
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -192,14 +194,16 @@ export default function LoginPage() {
     }, 600);
   };
 
+  const isDark = theme === 'dark';
+
   return (
     <>
       <LoadingOverlay isVisible={showOverlay} />
 
-      <div className={`fixed inset-0 flex bg-[#050510] overflow-hidden transition-opacity duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`fixed inset-0 flex bg-white dark:bg-[#050510] overflow-hidden transition-opacity duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
 
         {/* ═══ LEFT PANEL — Immersive Brand Showcase ═══ */}
-        <div className="hidden lg:flex lg:w-[52%] relative overflow-hidden bg-[#050510]">
+        <div className="hidden lg:flex lg:w-[52%] relative overflow-hidden bg-zinc-50 dark:bg-[#050510]">
           {/* Animated mesh gradient background */}
           <div className="absolute inset-0">
             <div className="absolute inset-0 opacity-[0.03]" style={{
@@ -227,13 +231,13 @@ export default function LoginPage() {
               {/* Badge */}
               <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-violet-400/15 bg-violet-400/[0.06] backdrop-blur-sm">
                 <Sparkles className="h-3.5 w-3.5 text-violet-400" />
-                <span className="text-violet-300/90 text-[11px] font-semibold uppercase tracking-[0.2em]">Workspace</span>
+                <span className="text-violet-600 dark:text-violet-300/90 text-[11px] font-semibold uppercase tracking-[0.2em]">Workspace</span>
               </div>
 
               {/* Brand name */}
               <div className="flex items-center gap-3.5">
                 <Image src="/logo.png" alt="CodePulse" width={46} height={46} className="rounded-xl shadow-2xl shadow-violet-500/25 ring-1 ring-white/10" />
-                <h1 className="text-[2.6rem] font-extrabold text-white tracking-tight">CodePulse</h1>
+                <h1 className="text-[2.6rem] font-extrabold text-zinc-900 dark:text-white tracking-tight">CodePulse</h1>
               </div>
 
               {/* Animated visual */}
@@ -243,7 +247,7 @@ export default function LoginPage() {
             {/* Testimonial */}
             <div className="space-y-4">
               <div className="h-px w-16 bg-gradient-to-r from-violet-500/40 to-transparent" />
-              <p className="text-zinc-400/90 text-[15px] leading-relaxed italic max-w-sm">
+              <p className="text-zinc-500 dark:text-zinc-400/90 text-[15px] leading-relaxed italic max-w-sm">
                 &quot;The most seamless coding tracking experience we&apos;ve ever used. It feels like magic.&quot;
               </p>
               <div className="flex items-center gap-3">
@@ -251,7 +255,7 @@ export default function LoginPage() {
                   CP
                 </div>
                 <div>
-                  <div className="text-white text-sm font-semibold">CodePulse</div>
+                  <div className="text-zinc-900 dark:text-white text-sm font-semibold">CodePulse</div>
                   <div className="text-zinc-500 text-[11px] uppercase tracking-[0.15em]">Developer Platform</div>
                 </div>
               </div>
@@ -270,6 +274,20 @@ export default function LoginPage() {
           {/* Subtle gradient line on left edge (desktop only) */}
           <div className="hidden lg:block absolute left-0 top-[10%] bottom-[10%] w-px bg-gradient-to-b from-transparent via-violet-500/20 to-transparent" />
 
+          {/* Theme toggle — top right */}
+          <div className="absolute top-6 right-6">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              className="h-9 w-9 rounded-xl text-zinc-400 hover:text-violet-600 dark:text-zinc-500 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] transition-all duration-200"
+            >
+              <Sun className="h-4 w-4 dark:hidden" />
+              <Moon className="h-4 w-4 hidden dark:block" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+          </div>
+
           <div className="relative w-full max-w-[420px] px-6 py-8">
             {/* Mobile logo (hidden on desktop) */}
             <div className="mb-6 flex flex-col items-center gap-1.5 lg:hidden">
@@ -286,26 +304,26 @@ export default function LoginPage() {
               <p className="text-muted-foreground mt-1.5 uppercase tracking-[0.15em] text-[11px] font-medium">Sign in to your account</p>
             </div>
 
-            {/* Google Login — prominent at top */}
+            {/* Google Login — centered */}
             <div className="mb-5">
-              <div className="flex justify-center w-full [&>div]:!w-full">
+              <div className="flex justify-center w-full">
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
                   text="continue_with"
-                  theme="outline"
+                  theme={isDark ? "filled_black" : "outline"}
                   size="large"
                   shape="rectangular"
-                  width="100%"
+                  width="380"
                 />
               </div>
             </div>
 
             {/* Divider */}
             <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-800" /></div>
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-200 dark:border-zinc-800" /></div>
               <div className="relative flex justify-center text-[10px] uppercase tracking-[0.15em]">
-                <span className="bg-[#050510] px-4 text-zinc-500 font-medium">Or sign in with email</span>
+                <span className="bg-white dark:bg-[#050510] px-4 text-zinc-500 font-medium">Or sign in with email</span>
               </div>
             </div>
 
@@ -322,7 +340,7 @@ export default function LoginPage() {
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     required
                     autoComplete="username"
-                    className="h-11 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl transition-all duration-300 placeholder:text-zinc-600 hover:border-zinc-700"
+                    className="h-11 text-sm bg-zinc-50 dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl transition-all duration-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 hover:border-zinc-300 dark:hover:border-zinc-700"
                   />
                 </div>
               </div>
@@ -344,7 +362,7 @@ export default function LoginPage() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
                     autoComplete="current-password"
-                    className="h-11 pr-11 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl transition-all duration-300 placeholder:text-zinc-600 hover:border-zinc-700"
+                    className="h-11 pr-11 text-sm bg-zinc-50 dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl transition-all duration-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 hover:border-zinc-300 dark:hover:border-zinc-700"
                   />
                   <button
                     type="button"
@@ -381,7 +399,7 @@ export default function LoginPage() {
               id="guest-login-btn"
               type="button"
               onClick={handleGuestLogin}
-              className="group w-full flex items-center justify-center gap-2 mt-3 rounded-xl border border-dashed border-zinc-800 bg-transparent px-4 py-2.5 text-sm font-medium text-zinc-500 transition-all duration-300 hover:border-violet-400/40 hover:text-violet-400 hover:bg-violet-500/[0.04]"
+              className="group w-full flex items-center justify-center gap-2 mt-3 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 bg-transparent px-4 py-2.5 text-sm font-medium text-zinc-500 transition-all duration-300 hover:border-violet-400/40 hover:text-violet-400 hover:bg-violet-500/[0.04]"
             >
               <UserCircle2 className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
               Continue as Guest

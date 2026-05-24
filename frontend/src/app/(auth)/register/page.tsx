@@ -8,15 +8,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthService } from '@/lib/api/auth.service';
 import { useAuthStore } from '@/lib/store/auth.store';
-import { Eye, EyeOff, Check, X, ArrowRight, ShieldCheck, Loader2, ArrowLeft, Users } from 'lucide-react';
+import { Eye, EyeOff, Check, X, ArrowRight, ShieldCheck, Loader2, ArrowLeft, Users, Sun, Moon } from 'lucide-react';
 import Image from 'next/image';
 import { GoogleLogin } from '@react-oauth/google';
+import { useTheme } from 'next-themes';
 
 type Step = 'form' | 'otp';
 
 export default function RegisterPage() {
   const router = useRouter();
   const storeLogin = useAuthStore((state) => state.login);
+  const { theme, setTheme } = useTheme();
   const [step, setStep] = useState<Step>('form');
   const [formData, setFormData] = useState({ name: '', username: '', email: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -123,7 +125,13 @@ export default function RegisterPage() {
         password: formData.password,
       });
 
-      router.push('/login');
+      // Step 3: Auto-login and go straight to dashboard
+      const userData = await AuthService.login({
+        username: formData.username,
+        password: formData.password,
+      });
+      storeLogin(userData);
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Verification failed. Please try again.');
     } finally {
@@ -191,11 +199,26 @@ export default function RegisterPage() {
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
+  const isDark = theme === 'dark';
+
   return (
-    <div className="fixed inset-0 flex bg-[#050510] overflow-hidden">
+    <div className="fixed inset-0 flex bg-white dark:bg-[#050510] overflow-hidden">
 
       {/* ═══ LEFT PANEL — Form ═══ */}
       <div className="flex-1 flex items-center justify-center relative overflow-y-auto">
+        {/* Theme toggle — top left */}
+        <div className="absolute top-6 left-6 z-10">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            className="h-9 w-9 rounded-xl text-zinc-400 hover:text-violet-600 dark:text-zinc-500 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] transition-all duration-200"
+          >
+            <Sun className="h-4 w-4 dark:hidden" />
+            <Moon className="h-4 w-4 hidden dark:block" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
+        </div>
         {/* Light mode background decoration */}
         <div className="pointer-events-none absolute inset-0 lg:hidden">
           <div className="absolute -top-32 -left-32 h-[400px] w-[400px] rounded-full bg-violet-500/[0.06] blur-[100px] animate-pulse" />
@@ -215,7 +238,7 @@ export default function RegisterPage() {
           {step === 'form' ? (
             <>
               <div className="mb-4">
-                <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-white">Create Account</h2>
+                <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Create Account</h2>
                 <p className="text-zinc-500 mt-1 uppercase tracking-[0.15em] text-[11px] font-medium">Enter your information to get started</p>
               </div>
 
@@ -226,13 +249,13 @@ export default function RegisterPage() {
                     <Label htmlFor="reg-name" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Full Name</Label>
                     <Input id="reg-name" name="reg-name" placeholder="John Doe" value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })} required autoComplete="off"
-                      className="h-10 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-600 transition-all duration-300 hover:border-zinc-700" />
+                      className="h-10 text-sm bg-zinc-50 dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-400 dark:placeholder:text-zinc-600 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-700" />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="reg-username" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Username</Label>
                     <Input id="reg-username" name="reg-username" placeholder="developer123" value={formData.username}
                       onChange={(e) => setFormData({ ...formData, username: e.target.value })} required autoComplete="off"
-                      className="h-10 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-600 transition-all duration-300 hover:border-zinc-700" />
+                      className="h-10 text-sm bg-zinc-50 dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-400 dark:placeholder:text-zinc-600 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-700" />
                   </div>
                 </div>
 
@@ -241,7 +264,7 @@ export default function RegisterPage() {
                   <Label htmlFor="reg-email" className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Email</Label>
                   <Input id="reg-email" name="reg-email" type="email" placeholder="name@gmail.com" value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })} required autoComplete="off"
-                    className="h-10 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-600 transition-all duration-300 hover:border-zinc-700" />
+                    className="h-10 text-sm bg-zinc-50 dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-400 dark:placeholder:text-zinc-600 transition-all duration-300 hover:border-zinc-300 dark:hover:border-zinc-700" />
                 </div>
 
                 {/* Password & Confirm row */}
@@ -251,7 +274,7 @@ export default function RegisterPage() {
                     <div className="relative">
                       <Input id="reg-password" name="reg-password" type={showPassword ? "text" : "password"} placeholder="Min 6 chars"
                         value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required autoComplete="new-password"
-                        className="h-10 pr-10 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-600" />
+                        className="h-10 pr-10 text-sm bg-zinc-50 dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-400 dark:placeholder:text-zinc-600" />
                       <button type="button" onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors" tabIndex={-1}>
                         {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -263,7 +286,7 @@ export default function RegisterPage() {
                     <div className="relative">
                       <Input id="reg-confirm-password" name="reg-confirm-password" type={showConfirmPassword ? "text" : "password"} placeholder="Re-enter"
                         value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} required autoComplete="new-password"
-                        className="h-10 pr-10 text-sm bg-white/[0.04] border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-600" />
+                        className="h-10 pr-10 text-sm bg-zinc-50 dark:bg-white/[0.04] border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 rounded-xl placeholder:text-zinc-400 dark:placeholder:text-zinc-600" />
                       <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors" tabIndex={-1}>
                         {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -307,14 +330,14 @@ export default function RegisterPage() {
 
               {/* Divider */}
               <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-800" /></div>
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-200 dark:border-zinc-800" /></div>
                 <div className="relative flex justify-center text-[10px] uppercase tracking-[0.15em]">
-                  <span className="bg-[#050510] px-4 text-zinc-500 font-medium">Or continue with</span>
+                  <span className="bg-white dark:bg-[#050510] px-4 text-zinc-500 font-medium">Or continue with</span>
                 </div>
               </div>
 
-              <div className="flex justify-center w-full [&>div]:!w-full">
-                <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} text="signup_with" theme="outline" size="large" shape="rectangular" width="100%" />
+              <div className="flex justify-center w-full">
+                <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} text="signup_with" theme={isDark ? "filled_black" : "outline"} size="large" shape="rectangular" width="380" />
               </div>
 
               <p className="text-sm text-zinc-500 mt-4">
@@ -329,9 +352,9 @@ export default function RegisterPage() {
                 <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-blue-500/20 flex items-center justify-center mb-4 border border-violet-500/10">
                   <ShieldCheck className="h-7 w-7 text-violet-400" />
                 </div>
-                <h2 className="text-2xl font-bold tracking-tight text-white">Verify your email</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Verify your email</h2>
                 <p className="text-sm text-zinc-500 mt-2">
-                  We sent a 6-digit code to <span className="font-medium text-white">{formData.email}</span>
+                  We sent a 6-digit code to <span className="font-medium text-zinc-900 dark:text-white">{formData.email}</span>
                 </p>
               </div>
 
@@ -391,7 +414,7 @@ export default function RegisterPage() {
       </div>
 
       {/* ═══ RIGHT PANEL — Immersive Brand Showcase ═══ */}
-      <div className="hidden lg:flex lg:w-[48%] relative overflow-hidden bg-[#050510]">
+      <div className="hidden lg:flex lg:w-[48%] relative overflow-hidden bg-zinc-50 dark:bg-[#050510]">
         {/* Animated mesh gradient */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 opacity-[0.03]" style={{
@@ -427,7 +450,7 @@ export default function RegisterPage() {
 
           {/* Center */}
           <div className="flex flex-col items-center justify-center flex-1 gap-7">
-            <h2 className="text-4xl font-extrabold text-white tracking-tight">Join Us</h2>
+            <h2 className="text-4xl font-extrabold text-zinc-900 dark:text-white tracking-tight">Join Us</h2>
 
             {/* Animated visual with rotating rings */}
             <div className="relative w-52 h-52 flex items-center justify-center">
@@ -462,7 +485,7 @@ export default function RegisterPage() {
             </p>
             <div className="flex items-center justify-center gap-3">
               <div className="text-right">
-                <div className="text-white text-sm font-semibold">CodePulse</div>
+                <div className="text-zinc-900 dark:text-white text-sm font-semibold">CodePulse</div>
                 <div className="text-zinc-500 text-[11px] uppercase tracking-[0.15em]">Developer Platform</div>
               </div>
               <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-violet-500/25 ring-2 ring-violet-400/20">
