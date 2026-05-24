@@ -415,15 +415,33 @@ public class AuthController {
         return ResponseEntity.status(401).body(new MessageResponse("Error: Not authenticated."));
       }
 
-      UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-      Long userId = userDetails.getId();
+      Object principal = authentication.getPrincipal();
+      User user;
 
-      java.util.Optional<User> userOpt = userRepository.findById(userId);
-      if (!userOpt.isPresent()) {
-        return ResponseEntity.badRequest().body(new MessageResponse("Error: User not found."));
+      if (principal instanceof UserDetailsImpl) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+        java.util.Optional<User> userOpt = userRepository.findById(userDetails.getId());
+        if (!userOpt.isPresent()) {
+          return ResponseEntity.badRequest().body(new MessageResponse("Error: User not found."));
+        }
+        user = userOpt.get();
+      } else if (principal instanceof String) {
+        // Fallback: principal is a username string
+        String username = (String) principal;
+        java.util.Optional<User> userOpt = userRepository.findByUsername(username);
+        if (!userOpt.isPresent()) {
+          // Try email lookup as well
+          userOpt = userRepository.findByEmail(username);
+        }
+        if (!userOpt.isPresent()) {
+          return ResponseEntity.badRequest().body(new MessageResponse("Error: User not found."));
+        }
+        user = userOpt.get();
+      } else {
+        return ResponseEntity.status(401).body(new MessageResponse("Error: Unable to identify user."));
       }
 
-      User user = userOpt.get();
+      Long userId = user.getId();
       String username = user.getUsername();
 
       // Delete all related data first using native SQL (avoids entity column mismatch issues)
