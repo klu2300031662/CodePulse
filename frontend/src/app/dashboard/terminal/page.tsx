@@ -345,71 +345,68 @@ export default function TerminalPage() {
                         {isExecuting ? "executing" : result ? result.status : "ready"}
                       </span>
                     </div>
-                    <div className="flex-grow p-5 overflow-auto custom-scrollbar text-zinc-100 leading-relaxed select-text font-mono text-sm">
-                      {isExecuting ? (
-                        <div className="h-full flex items-center justify-center text-zinc-500 gap-2 text-sm">
-                          <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
-                          <span>Compiling & executing code...</span>
-                        </div>
-                      ) : result ? (
-                        <div className="space-y-4">
-                          {result.output ? (
-                            <pre className="whitespace-pre-wrap leading-relaxed">{result.output}</pre>
-                          ) : result.status === "Success" ? (
-                            <div className="text-zinc-500 italic text-sm">
-                              Process exited with status code 0.
-                            </div>
-                          ) : null}
-
-                          {result.error && (
-                            <div className="text-red-400 pt-2 border-t border-zinc-800/30">
-                              <pre className="whitespace-pre-wrap leading-relaxed">
-                                {result.output ? result.error.split('\n')[0] : result.error}
-                              </pre>
-                            </div>
-                          )}
-
-                          <div className="text-emerald-500 dark:text-emerald-400 font-bold text-xs pt-2.5 border-t border-zinc-800/30">
-                            {`...Program finished with status ${result.status}`}
+                    <div className="flex-grow p-5 overflow-auto custom-scrollbar text-zinc-100 leading-relaxed select-text font-mono text-sm flex flex-col justify-between">
+                      <div className="flex-1">
+                        {isExecuting ? (
+                          <div className="h-full flex items-center justify-center text-zinc-500 gap-2 text-sm">
+                            <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
+                            <span>Compiling & executing code...</span>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
-                          <span>Press &quot;Run&quot; to execute the code.</span>
+                        ) : result ? (
+                          <div className="space-y-4">
+                            {result.output ? (
+                              <pre className="whitespace-pre-wrap leading-relaxed">{result.output}</pre>
+                            ) : result.status === "Success" ? (
+                              <div className="text-zinc-500 italic text-sm">
+                                Process exited with status code 0.
+                              </div>
+                            ) : null}
+
+                            {result.error && (
+                              <div className="text-red-400 pt-2 border-t border-zinc-800/30">
+                                <pre className="whitespace-pre-wrap leading-relaxed">
+                                  {result.output ? result.error.split('\n')[0] : result.error}
+                                </pre>
+                              </div>
+                            )}
+
+                            <div className="text-emerald-500 dark:text-emerald-400 font-bold text-xs pt-2.5 border-t border-zinc-800/30">
+                              {`...Program finished with status ${result.status}`}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
+                            <span>Press &quot;Run&quot; to execute the code.</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Integrated Keyboard Input inside the black console */}
+                      {!isExecuting && needsInput && (
+                        <div className="flex flex-col space-y-1 font-mono mt-3 pt-3 border-t border-zinc-900/60 shrink-0">
+                          <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider select-none">
+                            Terminal Input (stdin):
+                          </span>
+                          <div className="flex gap-2 items-start">
+                            <span className="text-violet-500 font-bold mt-1 select-none">&gt;</span>
+                            <textarea
+                              placeholder="Type input here and press Enter to run..."
+                              className="flex-grow bg-transparent border-none outline-none text-zinc-100 font-mono text-sm p-1.5 focus:ring-0 resize-none h-12 caret-violet-500"
+                              value={customInput}
+                              onChange={(e) => setCustomInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault();
+                                  runCode();
+                                }
+                              }}
+                              autoFocus
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
-
-                  {/* Input section (shows up if the code needs standard input) */}
-                  {!isExecuting && needsInput && (
-                    <div className="flex flex-col space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/50">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-mono">
-                          Provide Input (stdin):
-                        </span>
-                        {!customInput.trim() && (
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10 animate-pulse">
-                            ⚠️ Input required
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex gap-3">
-                        <Textarea
-                          placeholder="Type your program inputs here (one per line)..."
-                          className="flex-grow min-h-[60px] max-h-[100px] font-mono text-base p-3 resize-none border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 focus-visible:ring-violet-500"
-                          value={customInput}
-                          onChange={(e) => setCustomInput(e.target.value)}
-                        />
-                        <Button
-                          className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white shadow-lg text-sm px-6 self-end h-12"
-                          onClick={handleEnterInput}
-                        >
-                          Enter
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
