@@ -41,6 +41,13 @@ export const useAuthStore = create<AuthState>()(
         };
         // Don't store guest token for axios — guest doesn't hit real APIs
         localStorage.setItem('user', JSON.stringify(guestUser));
+        // Clear the dashboard data cache
+        try {
+          const { invalidateAll } = require('@/lib/store/dashboard.store').useDashboardStore.getState();
+          invalidateAll();
+        } catch (err) {
+          console.error('Failed to invalidate dashboard cache:', err);
+        }
         set({ user: guestUser, isAuthenticated: true, isGuest: true });
       },
       logout: () => {

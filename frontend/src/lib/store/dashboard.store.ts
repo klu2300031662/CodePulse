@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { PlatformService, PlatformLink } from '@/lib/api/platform.service';
 import { ProblemService, Problem } from '@/lib/api/problem.service';
 import { PlatformAnalytics } from '@/lib/api/analytics.service';
-import { GUEST_PLATFORMS } from '@/lib/guest-data';
+import { GUEST_PLATFORMS, isGuestMode } from '@/lib/guest-data';
 
 interface CachedContest {
   platform: string;
@@ -91,8 +91,8 @@ interface DashboardState {
 
 export const useDashboardStore = create<DashboardState>()((set, get) => ({
   // Initialize from localStorage cache for instant render
-  platforms: (typeof window !== 'undefined' ? loadFromStorage<PlatformLink[]>('platforms') : null) || [],
-  problems: (typeof window !== 'undefined' ? loadFromStorage<Problem[]>('problems') : null) || [],
+  platforms: (typeof window !== 'undefined' && !isGuestMode() ? loadFromStorage<PlatformLink[]>('platforms') : null) || [],
+  problems: (typeof window !== 'undefined' && !isGuestMode() ? loadFromStorage<Problem[]>('problems') : null) || [],
   analyticsCache: (typeof window !== 'undefined' ? loadFromStorage<Record<string, PlatformAnalytics>>('analytics') : null) || {},
   contestsCache: (typeof window !== 'undefined' ? loadFromStorage<{ data: CachedContest[]; fetchedAt: number }>('contests') : null) || null,
   platformsLoaded: false,
@@ -100,6 +100,11 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
   loading: false,
 
   fetchPlatforms: async (isGuest = false) => {
+    if (isGuest) {
+      set({ platforms: [], platformsLoaded: true });
+      return [];
+    }
+
     const state = get();
 
     // If loaded in memory, return instantly
@@ -146,6 +151,11 @@ export const useDashboardStore = create<DashboardState>()((set, get) => ({
   },
 
   fetchProblems: async (isGuest = false) => {
+    if (isGuest) {
+      set({ problems: [], problemsLoaded: true });
+      return [];
+    }
+
     const state = get();
 
     if (state.problemsLoaded) return state.problems;

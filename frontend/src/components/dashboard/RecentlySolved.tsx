@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuthStore } from "@/lib/store/auth.store"
 import { useDashboardStore } from "@/lib/store/dashboard.store"
+import { isGuestMode } from "@/lib/guest-data"
 import { Flame, ExternalLink, Clock, Code2, Zap, Trophy, Loader2 } from "lucide-react"
 
 interface RecentSubmission {
@@ -73,14 +74,7 @@ function isToday(timestamp: string): boolean {
   return date.toDateString() === today.toDateString()
 }
 
-// Guest mock data
-const GUEST_SUBMISSIONS: RecentSubmission[] = [
-  { id: "1", title: "Two Sum", titleSlug: "two-sum", timestamp: String(Math.floor(Date.now() / 1000) - 3600), lang: "python3" },
-  { id: "2", title: "Valid Parentheses", titleSlug: "valid-parentheses", timestamp: String(Math.floor(Date.now() / 1000) - 7200), lang: "java" },
-  { id: "3", title: "Merge Two Sorted Lists", titleSlug: "merge-two-sorted-lists", timestamp: String(Math.floor(Date.now() / 1000) - 18000), lang: "cpp" },
-  { id: "4", title: "Best Time to Buy and Sell Stock", titleSlug: "best-time-to-buy-and-sell-stock", timestamp: String(Math.floor(Date.now() / 1000) - 86400), lang: "python3" },
-  { id: "5", title: "Binary Tree Inorder Traversal", titleSlug: "binary-tree-inorder-traversal", timestamp: String(Math.floor(Date.now() / 1000) - 172800), lang: "java" },
-]
+
 
 export default function RecentlySolved() {
   const [submissions, setSubmissions] = useState<RecentSubmission[]>([])
@@ -90,8 +84,9 @@ export default function RecentlySolved() {
   const { platforms, fetchPlatforms } = useDashboardStore()
 
   useEffect(() => {
-    if (user?.isGuest) {
-      setSubmissions(GUEST_SUBMISSIONS)
+    if (user?.isGuest || isGuestMode()) {
+      setSubmissions([])
+      setError("Connect your coding platforms to see recent submissions")
       setLoading(false)
       return
     }
@@ -177,9 +172,15 @@ export default function RecentlySolved() {
               <Code2 className="h-6 w-6 text-zinc-400 dark:text-zinc-600" />
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">{error}</p>
-            <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">
-              Go to Platforms → Link your LeetCode account
-            </p>
+            {user?.isGuest || isGuestMode() ? (
+              <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">
+                Sign up or log in to connect platforms
+              </p>
+            ) : (
+              <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1">
+                Go to Platforms → Link your LeetCode account
+              </p>
+            )}
           </div>
         ) : submissions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">

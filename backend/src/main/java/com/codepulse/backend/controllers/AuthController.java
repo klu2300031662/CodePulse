@@ -16,7 +16,9 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -59,13 +61,11 @@ public class AuthController {
   @PostMapping("/signin")
   public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
     try {
-      // Clear any stale security context before fresh authentication
-      SecurityContextHolder.clearContext();
-
+      // Authenticate the user — stateless JWT, no SecurityContext manipulation needed.
+      // The JWT filter handles per-request context. Touching SecurityContextHolder here
+      // can cross-contaminate auth between concurrent users via Tomcat thread reuse.
       Authentication authentication = authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
-
-      SecurityContextHolder.getContext().setAuthentication(authentication);
       String jwt = jwtUtils.generateJwtToken(authentication);
       
       UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();    
@@ -140,6 +140,12 @@ public class AuthController {
       userRepository.save(user);
 
       return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+    } catch (DataIntegrityViolationException e) {
+      // Race condition: another request registered the same username/email between
+      // the existence check and the save. Return a user-friendly error.
+      logger.warn("Registration race condition for '{}': {}", signUpRequest.getUsername(), e.getMessage());
+      return ResponseEntity.badRequest()
+          .body(new MessageResponse("Error: Username or email is already taken. Please try a different one."));
     } catch (Exception e) {
       logger.error("Error during user registration: {}", e.getMessage(), e);
       return ResponseEntity.status(500)
@@ -230,6 +236,17 @@ public class AuthController {
 
   // ── In-memory OTP store (simple approach) ──
   private static final java.util.concurrent.ConcurrentHashMap<String, OtpEntry> otpStore = new java.util.concurrent.ConcurrentHashMap<>();
+
+  /** Periodically clean up expired OTPs to prevent memory leaks. */
+  @Scheduled(fixedRate = 300000) // Every 5 minutes
+  public void cleanExpiredOtps() {
+    int before = otpStore.size();
+    otpStore.entrySet().removeIf(e -> e.getValue().expiry.isBefore(java.time.LocalDateTime.now()));
+    int removed = before - otpStore.size();
+    if (removed > 0) {
+      logger.info("Cleaned {} expired OTP entries", removed);
+    }
+  }
 
   private static class OtpEntry {
     String otp;
@@ -390,8 +407,9 @@ public class AuthController {
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
             userDetails, null, userDetails.getAuthorities());
-            
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // Stateless JWT — generate token without touching SecurityContextHolder.
+        // Setting context here can cross-contaminate auth between concurrent users.
         String jwt = jwtUtils.generateJwtToken(authentication);
 
         return ResponseEntity.ok(new JwtResponse(jwt, 
