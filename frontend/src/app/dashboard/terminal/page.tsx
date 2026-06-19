@@ -75,7 +75,7 @@ export default function TerminalPage() {
   const [analysis, setAnalysis] = useState<ComplexityAnalysis | null>(null)
   
   // Drawer states
-  const [activeDrawer, setActiveDrawer] = useState<"input" | "output" | "analysis" | null>(null)
+  const [activeDrawer, setActiveDrawer] = useState<"console" | "analysis" | null>(null)
   const [drawerHeight, setDrawerHeight] = useState(380)
   const [isDragging, setIsDragging] = useState(false)
   const dragStartY = useRef(0)
@@ -172,17 +172,11 @@ export default function TerminalPage() {
   }
 
   const handleRunClick = () => {
-    if (needsInput) {
-      setActiveDrawer("input")
-      runCode()
-    } else {
-      setActiveDrawer("output")
-      runCode()
-    }
+    setActiveDrawer("console")
+    runCode()
   }
-
+ 
   const handleEnterInput = () => {
-    setActiveDrawer("output")
     runCode()
   }
 
@@ -325,72 +319,11 @@ export default function TerminalPage() {
             </Button>
 
             <div className="flex-grow p-5 overflow-auto select-text min-h-0 flex flex-col">
-              {activeDrawer === "input" && (
-                <div className="flex flex-col h-full space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">
-                      Standard Input (stdin)
-                    </h3>
-                    {needsInput && !customInput.trim() && (
-                      <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10 animate-pulse">
-                        ⚠️ Input expected by code
-                      </span>
-                    )}
-                  </div>
-
-                  {isExecuting ? (
-                    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-950 p-4 font-mono text-sm text-zinc-400 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
-                      <span>Compiling & executing to get prompts...</span>
-                    </div>
-                  ) : (result?.output || result?.error) ? (
-                    <div className="flex flex-col space-y-1.5">
-                      <span className="text-xs text-zinc-400 font-mono font-bold uppercase tracking-wider">
-                        Program Output Prompt:
-                      </span>
-                      <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 p-4 font-mono text-sm text-zinc-100 max-h-[120px] overflow-auto select-text leading-relaxed">
-                        {result.output ? (
-                          <pre className="whitespace-pre-wrap">{result.output}</pre>
-                        ) : result.error ? (
-                          <pre className="whitespace-pre-wrap text-red-400 font-sans">
-                            {result.error.split('\n')[0]}
-                          </pre>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <Textarea
-                    placeholder="Enter custom input values here (one value per line)..."
-                    className="flex-1 font-mono text-base p-4 resize-none border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 focus-visible:ring-violet-500"
-                    value={customInput}
-                    onChange={(e) => setCustomInput(e.target.value)}
-                  />
-                  <div className="flex justify-end gap-3 pt-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setActiveDrawer(null)
-                        setDrawerHeight(380)
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white shadow-lg text-sm px-5"
-                      onClick={handleEnterInput}
-                    >
-                      Enter & Run
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {activeDrawer === "output" && (
+              {activeDrawer === "console" && (
                 <div className="flex-grow flex flex-col min-h-0 space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">
-                      Console Output
+                      Console
                     </h3>
                     {result && (
                       <div className="flex items-center gap-3 text-sm text-zinc-500 font-mono">
@@ -409,7 +342,7 @@ export default function TerminalPage() {
                         <span>interactive-console</span>
                       </div>
                       <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded bg-zinc-800 font-semibold">
-                        {result ? result.status : "executing"}
+                        {isExecuting ? "executing" : result ? result.status : "ready"}
                       </span>
                     </div>
                     <div className="flex-grow p-5 overflow-auto custom-scrollbar text-zinc-100 leading-relaxed select-text font-mono text-sm">
@@ -430,7 +363,9 @@ export default function TerminalPage() {
 
                           {result.error && (
                             <div className="text-red-400 pt-2 border-t border-zinc-800/30">
-                              <pre className="whitespace-pre-wrap leading-relaxed">{result.error}</pre>
+                              <pre className="whitespace-pre-wrap leading-relaxed">
+                                {result.output ? result.error.split('\n')[0] : result.error}
+                              </pre>
                             </div>
                           )}
 
@@ -438,9 +373,43 @@ export default function TerminalPage() {
                             {`...Program finished with status ${result.status}`}
                           </div>
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
+                          <span>Press &quot;Run&quot; to execute the code.</span>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Input section (shows up if the code needs standard input) */}
+                  {!isExecuting && needsInput && (
+                    <div className="flex flex-col space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-mono">
+                          Provide Input (stdin):
+                        </span>
+                        {!customInput.trim() && (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10 animate-pulse">
+                            ⚠️ Input required
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-3">
+                        <Textarea
+                          placeholder="Type your program inputs here (one per line)..."
+                          className="flex-grow min-h-[60px] max-h-[100px] font-mono text-base p-3 resize-none border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 focus-visible:ring-violet-500"
+                          value={customInput}
+                          onChange={(e) => setCustomInput(e.target.value)}
+                        />
+                        <Button
+                          className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white shadow-lg text-sm px-6 self-end h-12"
+                          onClick={handleEnterInput}
+                        >
+                          Enter
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
