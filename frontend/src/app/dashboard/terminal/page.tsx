@@ -2,19 +2,21 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react"
 import Editor from "@monaco-editor/react"
-import { Play, Loader2, Info, Sparkles, Zap, Brain, Clock, FileText, Lightbulb, Terminal, AlertTriangle } from "lucide-react"
+import { Play, Loader2, Info, Sparkles, Brain, Clock, FileText, Lightbulb, Terminal, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TerminalService, ExecuteResponse, ComplexityAnalysis } from "@/lib/api/terminal.service"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
 } from "@/components/ui/tooltip"
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
+} from "@/components/ui/dialog"
 
 const LANGUAGES = [
   { value: "c",          label: "C",          icon: "🔵", monacoLang: "c" },
@@ -71,7 +73,7 @@ export default function TerminalPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<ExecuteResponse | null>(null)
   const [analysis, setAnalysis] = useState<ComplexityAnalysis | null>(null)
-  const [activeRightTab, setActiveRightTab] = useState("output")
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false)
 
   // Persist code, language, and input to sessionStorage on every change
   useEffect(() => {
@@ -116,7 +118,6 @@ export default function TerminalPage() {
   const runCode = async () => {
     setIsExecuting(true)
     setResult(null)
-    setActiveRightTab("output")
     try {
       const res = await TerminalService.execute({ language, code, input: customInput })
       setResult(res)
@@ -137,7 +138,7 @@ export default function TerminalPage() {
     if (!code.trim()) return
     setIsAnalyzing(true)
     setAnalysis(null)
-    setActiveRightTab("analysis")
+    setIsAnalysisOpen(true)
     try {
       const res = await TerminalService.analyzeComplexity(code, language)
       setAnalysis(res)
@@ -214,12 +215,12 @@ export default function TerminalPage() {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
-        {/* Editor */}
-        <Card className="lg:col-span-2 flex flex-col min-h-0 border-zinc-200 dark:border-zinc-800">
+      {/* Main content - Vertical layout split (Editor top, Console bottom) */}
+      <div className="flex flex-col flex-1 min-h-0 space-y-4">
+        {/* Editor Card (60% height) */}
+        <Card className="flex-[3] flex flex-col min-h-0 border-zinc-200 dark:border-zinc-800">
           <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b space-y-0">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <span>{currentLang?.icon}</span> {currentLang?.label} Editor
             </CardTitle>
             <span className="text-[10px] text-muted-foreground font-mono">
@@ -249,162 +250,164 @@ export default function TerminalPage() {
           </CardContent>
         </Card>
 
-        {/* Right panel */}
-        <Card className="flex flex-col min-h-0 border-zinc-200 dark:border-zinc-800">
-          <Tabs value={activeRightTab} onValueChange={setActiveRightTab} className="flex flex-col h-full">
-            <CardHeader className="py-2 px-4 border-b space-y-0">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="output">Output</TabsTrigger>
-                <TabsTrigger value="analysis" className="flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" /> Analysis
-                </TabsTrigger>
-                <TabsTrigger value="input" className="relative">
-                  Input
-                  {needsInput && !customInput.trim() && (
-                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                  )}
-                </TabsTrigger>
-              </TabsList>
-            </CardHeader>
-            <CardContent className="flex-1 p-4 overflow-auto min-h-0">
-              {/* Input Tab */}
-              <TabsContent value="input" className="h-full m-0">
-                <div className="flex flex-col h-full space-y-2">
-                  <Label>Standard Input (stdin)</Label>
-                  {needsInput && !customInput.trim() && (
-                    <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-400 text-xs">
-                      <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span>Your code uses <strong>stdin</strong> — provide input below or it will run with empty input.</span>
+        {/* Console / Terminal Card (40% height) */}
+        <Card className="flex-[2] flex flex-col min-h-0 border-zinc-200 dark:border-zinc-800">
+          <CardContent className="flex-1 p-4 min-h-0 flex gap-4 overflow-hidden">
+            {/* Stdin (Left Column) */}
+            <div className="w-[30%] flex flex-col space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                  Stdin Input
+                </Label>
+                {needsInput && !customInput.trim() && (
+                  <span className="text-[9px] text-amber-600 dark:text-amber-405 font-semibold px-2 py-0.5 rounded bg-amber-500/10 animate-pulse">
+                    Required
+                  </span>
+                )}
+              </div>
+              <Textarea
+                placeholder="Type input here (one value per line)..."
+                className="flex-1 font-mono text-xs resize-none border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 focus-visible:ring-violet-500"
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+              />
+            </div>
+
+            {/* Output Console (Right Column) */}
+            <div className="flex-grow flex flex-col min-h-0 space-y-2">
+              <Label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                Console Output
+              </Label>
+              <div className="flex-1 min-h-0 rounded-lg border border-zinc-200 dark:border-zinc-850 bg-zinc-950 dark:bg-black font-mono text-xs overflow-hidden flex flex-col">
+                {/* Console Header */}
+                <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 text-[10px] text-zinc-500 select-none">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>interactive-console</span>
+                  </div>
+                  {result && (
+                    <div className="flex items-center gap-3">
+                      <span>{result.status}</span>
+                      <span>{result.executionTimeMs}ms</span>
+                      {result.memoryUsage && <span>{result.memoryUsage}</span>}
                     </div>
                   )}
-                  <Textarea
-                    placeholder="Enter custom input here (one value per line)..."
-                    className="flex-1 font-mono text-sm resize-none"
-                    value={customInput}
-                    onChange={(e) => setCustomInput(e.target.value)}
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Tip: Enter input values separated by newlines, just like typing in a terminal.
-                  </p>
                 </div>
-              </TabsContent>
-
-              {/* Output Tab */}
-              <TabsContent value="output" className="h-full m-0 space-y-4">
-                {result ? (
-                  <div className="space-y-4 h-full flex flex-col">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      Status:
-                      <span className={result.status === 'Success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                        {result.status}
-                      </span>
+                {/* Console Body */}
+                <div className="flex-1 p-3 overflow-auto custom-scrollbar text-zinc-100 select-text leading-relaxed">
+                  {isExecuting ? (
+                    <div className="h-full flex items-center justify-center text-zinc-500 gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-500" />
+                      <span>Compiling & executing...</span>
                     </div>
+                  ) : result ? (
+                    <div className="space-y-2">
+                      {/* Program output */}
+                      {result.output ? (
+                        <pre className="whitespace-pre-wrap">{result.output}</pre>
+                      ) : result.status === "Success" ? (
+                        <div className="text-zinc-500 italic text-[11px]">
+                          Process exited with status code 0.
+                        </div>
+                      ) : null}
 
-                    <div className="flex gap-4 text-xs text-muted-foreground border-b pb-2 flex-wrap">
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {result.executionTimeMs} ms</span>
-                      {result.memoryUsage && <span>💾 {result.memoryUsage}</span>}
-                    </div>
-
-                    {/* Stdin indicator */}
-                    {customInput.trim() && (
-                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-zinc-100 dark:bg-zinc-900 rounded px-2 py-1 w-fit">
-                        <Terminal className="h-3 w-3" /> Custom input provided
-                      </div>
-                    )}
-
-                    <div className="flex-1 space-y-2 overflow-auto">
-                      <Label>Standard Output</Label>
-                      <pre className="p-3 bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 rounded-lg font-mono text-sm whitespace-pre-wrap min-h-[100px] border border-zinc-200 dark:border-zinc-800">
-                        {result.output || (result.status === 'Success' ? 'Process exited with no output.' : '')}
-                      </pre>
-
+                      {/* Program error */}
                       {result.error && (
-                        <div className="mt-4">
-                          <Label className="text-red-600 dark:text-red-400">Error</Label>
-                          <pre className="p-3 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 rounded-lg font-mono text-sm whitespace-pre-wrap border border-red-200 dark:border-red-900/30">
-                            {result.error}
-                          </pre>
+                        <div className="text-red-400 pt-2 border-t border-zinc-800/30">
+                          <pre className="whitespace-pre-wrap">{result.error}</pre>
                         </div>
                       )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2">
-                    <Info className="h-8 w-8 opacity-20" />
-                    <p className="text-sm">Run your code to see the output here</p>
-                    {needsInput && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        Your code seems to need input — check the Input tab
-                      </p>
-                    )}
-                  </div>
-                )}
-              </TabsContent>
 
-              {/* Analysis Tab */}
-              <TabsContent value="analysis" className="h-full m-0">
-                {isAnalyzing ? (
-                  <div className="h-full flex flex-col items-center justify-center space-y-3">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full blur-xl opacity-30 animate-pulse" />
-                      <Sparkles className="h-8 w-8 text-violet-500 animate-pulse relative" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">AI is analyzing your code...</p>
-                  </div>
-                ) : analysis ? (
-                  <div className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-400">
-                    {/* Source badge */}
-                    <div className="flex justify-end">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                        analysis.source === 'ai'
-                          ? 'bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800'
-                          : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                      }`}>
-                        {analysis.source === 'ai' ? '✨ AI Analysis' : '📐 Heuristic'}
-                      </span>
-                    </div>
-
-                    {/* Time Complexity */}
-                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <span className="text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wide">Time Complexity</span>
+                      {/* Finished message */}
+                      <div className="text-emerald-500 dark:text-emerald-400 font-bold text-[10px] pt-2 border-t border-zinc-850/30">
+                        {`...Program finished with status ${result.status}`}
                       </div>
-                      <p className="text-2xl font-black text-blue-700 dark:text-blue-300 font-mono">{analysis.timeComplexity}</p>
-                      <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">{analysis.timeExplanation}</p>
                     </div>
-
-                    {/* Space Complexity */}
-                    <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Brain className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide">Space Complexity</span>
-                      </div>
-                      <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 font-mono">{analysis.spaceComplexity}</p>
-                      <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">{analysis.spaceExplanation}</p>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-zinc-650 text-center py-4 space-y-1">
+                      <Terminal className="h-5 w-5 opacity-30" />
+                      <p className="text-[11px]">Click Run to execute code</p>
                     </div>
-
-                    {/* Reasoning */}
-                    <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FileText className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wide">Explanation</span>
-                      </div>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{analysis.reasoning}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-3">
-                    <Sparkles className="h-8 w-8 opacity-20" />
-                    <p className="text-sm text-center">Click <strong>Analyze</strong> to get AI-powered<br />complexity analysis</p>
-                  </div>
-                )}
-              </TabsContent>
-            </CardContent>
-          </Tabs>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
+
+      {/* Complexity Analysis Dialog */}
+      <Dialog open={isAnalysisOpen} onOpenChange={setIsAnalysisOpen}>
+        <DialogContent className="max-w-2xl bg-white dark:bg-[#0f0f23]/95 border-zinc-200 dark:border-zinc-800/50 backdrop-blur-xl text-zinc-900 dark:text-zinc-100 overflow-hidden shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-violet-500 animate-pulse" />
+              AI Complexity Analysis
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500 dark:text-zinc-400">
+              Estimated time and space complexity using static analysis and AI model.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isAnalyzing ? (
+            <div className="py-12 flex flex-col items-center justify-center space-y-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full blur-xl opacity-30 animate-pulse" />
+                <Sparkles className="h-10 w-10 text-violet-500 animate-pulse relative" />
+              </div>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">AI is analyzing your code structure...</p>
+            </div>
+          ) : analysis ? (
+            <div className="space-y-5 py-2">
+              {/* Source badge */}
+              <div className="flex justify-end">
+                <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold tracking-wide ${
+                  analysis.source === 'ai'
+                    ? 'bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-850'
+                    : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-850'
+                }`}>
+                  {analysis.source === 'ai' ? '✨ AI Verified' : '📐 Static Heuristics'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Time Complexity */}
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 dark:from-blue-500/15 dark:to-cyan-500/5 border border-blue-200/50 dark:border-blue-500/10 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-4.5 w-4.5 text-blue-500" />
+                    <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Time Complexity</span>
+                  </div>
+                  <p className="text-3xl font-black text-blue-600 dark:text-blue-400 font-mono tracking-tight">{analysis.timeComplexity}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400/80 mt-2 leading-relaxed">{analysis.timeExplanation}</p>
+                </div>
+
+                {/* Space Complexity */}
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/5 dark:from-emerald-500/15 dark:to-teal-500/5 border border-emerald-200/50 dark:border-emerald-500/10 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Brain className="h-4.5 w-4.5 text-emerald-500" />
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">Space Complexity</span>
+                  </div>
+                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">{analysis.spaceComplexity}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400/80 mt-2 leading-relaxed">{analysis.spaceExplanation}</p>
+                </div>
+              </div>
+
+              {/* Detailed Explanation */}
+              <div className="p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-zinc-800/80 shadow-inner">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <FileText className="h-4.5 w-4.5 text-zinc-500 dark:text-zinc-400" />
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Reasoning & Breakdown</span>
+                </div>
+                <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed font-sans whitespace-pre-line">{analysis.reasoning}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-zinc-500 dark:text-zinc-450 text-sm">
+              No analysis data available.
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
