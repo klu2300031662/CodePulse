@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import Editor from "@monaco-editor/react"
 import { Play, Loader2, Info, Sparkles, Brain, Clock, FileText, Lightbulb, Terminal, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -73,9 +73,14 @@ export default function TerminalPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<ExecuteResponse | null>(null)
   const [analysis, setAnalysis] = useState<ComplexityAnalysis | null>(null)
-  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false)
+  
+  // Drawer states
+  const [activeDrawer, setActiveDrawer] = useState<"input" | "output" | "analysis" | null>(null)
+  const [drawerHeight, setDrawerHeight] = useState(380)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStartY = useRef(0)
+  const dragStartHeight = useRef(0)
 
-  // Persist code, language, and input to sessionStorage on every change
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEYS.code, code)
   }, [code])
@@ -88,11 +93,9 @@ export default function TerminalPage() {
     sessionStorage.setItem(STORAGE_KEYS.input, customInput)
   }, [customInput])
 
-  // Clear sessionStorage on logout (listen for storage event or auth token removal)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'token' && !e.newValue) {
-        // User logged out — clear terminal session
         sessionStorage.removeItem(STORAGE_KEYS.code)
         sessionStorage.removeItem(STORAGE_KEYS.language)
         sessionStorage.removeItem(STORAGE_KEYS.input)
@@ -102,18 +105,10 @@ export default function TerminalPage() {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
-  // Detect whether the code expects stdin input
   const needsInput = useMemo(() => {
     const patterns = STDIN_PATTERNS[language] || []
     return patterns.some(p => p.test(code))
   }, [code, language])
-
-  const handleLanguageChange = (val: string) => {
-    setLanguage(val)
-    setCode(DEFAULT_CODE[val])
-    setResult(null)
-    setAnalysis(null)
-  }
 
   const runCode = async () => {
     setIsExecuting(true)
@@ -138,7 +133,6 @@ export default function TerminalPage() {
     if (!code.trim()) return
     setIsAnalyzing(true)
     setAnalysis(null)
-    setIsAnalysisOpen(true)
     try {
       const res = await TerminalService.analyzeComplexity(code, language)
       setAnalysis(res)
@@ -154,11 +148,47 @@ export default function TerminalPage() {
     }
   }
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true)
+    dragStartY.current = e.clientY
+    dragStartHeight.current = drawerHeight
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return
+    const deltaY = e.clientY - dragStartY.current
+    const newHeight = Math.max(200, Math.min(window.innerHeight - 120, dragStartHeight.current - deltaY))
+    setDrawerHeight(newHeight)
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false)
+    ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+    if (drawerHeight < 220) {
+      setActiveDrawer(null)
+      setDrawerHeight(380)
+    }
+  }
+
+  const handleRunClick = () => {
+    setActiveDrawer("input")
+  }
+
+  const handleEnterInput = () => {
+    setActiveDrawer("output")
+    runCode()
+  }
+
+  const handleAnalyzeClick = () => {
+    setActiveDrawer("analysis")
+    analyzeComplexity()
+  }
+
   const currentLang = LANGUAGES.find(l => l.value === language)
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent">
@@ -168,7 +198,7 @@ export default function TerminalPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Select value={language} onValueChange={handleLanguageChange}>
+          <Select value={language} onValueChange={(val) => { setLanguage(val); setCode(DEFAULT_CODE[val]); }}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Language" />
             </SelectTrigger>
@@ -181,12 +211,12 @@ export default function TerminalPage() {
             </SelectContent>
           </Select>
 
-          <Button onClick={runCode} disabled={isExecuting} variant="default" className="flex gap-2">
+          <Button onClick={handleRunClick} disabled={isExecuting} variant="default" className="flex gap-2">
             {isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
             {isExecuting ? "Running..." : "Run"}
           </Button>
 
-          <Button onClick={analyzeComplexity} disabled={isAnalyzing || !code.trim()}
+          <Button onClick={handleAnalyzeClick} disabled={isAnalyzing || !code.trim()}
             variant="outline"
             className="flex gap-2 border-violet-300 dark:border-violet-700 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950">
             {isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
@@ -198,7 +228,7 @@ export default function TerminalPage() {
               <TooltipTrigger asChild>
                 <div className="relative">
                   <Button variant="outline" className="flex gap-2 border-dashed border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30" disabled>
-                    <Lightbulb className="h-4 w-4" />
+                    <Lightbulb className="h-4 w-4 text-zinc-400 dark:text-zinc-600" />
                     Optimize
                   </Button>
                   <span className="absolute -top-2 -right-2 px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm whitespace-nowrap">
@@ -215,10 +245,8 @@ export default function TerminalPage() {
         </div>
       </div>
 
-      {/* Main content - Vertical layout split (Editor top, Console bottom) */}
-      <div className="flex flex-col flex-1 min-h-0 space-y-4">
-        {/* Editor Card (60% height) */}
-        <Card className="flex-[3] flex flex-col min-h-0 border-zinc-200 dark:border-zinc-800">
+      <div className="flex flex-col flex-1 min-h-0">
+        <Card className="flex-1 flex flex-col min-h-0 border-zinc-200 dark:border-zinc-800">
           <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b space-y-0">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <span>{currentLang?.icon}</span> {currentLang?.label} Editor
@@ -249,165 +277,206 @@ export default function TerminalPage() {
             />
           </CardContent>
         </Card>
-
-        {/* Console / Terminal Card (40% height) */}
-        <Card className="flex-[2] flex flex-col min-h-0 border-zinc-200 dark:border-zinc-800">
-          <CardContent className="flex-1 p-4 min-h-0 flex gap-4 overflow-hidden">
-            {/* Stdin (Left Column) */}
-            <div className="w-[30%] flex flex-col space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  Stdin Input
-                </Label>
-                {needsInput && !customInput.trim() && (
-                  <span className="text-[9px] text-amber-600 dark:text-amber-405 font-semibold px-2 py-0.5 rounded bg-amber-500/10 animate-pulse">
-                    Required
-                  </span>
-                )}
-              </div>
-              <Textarea
-                placeholder="Type input here (one value per line)..."
-                className="flex-1 font-mono text-xs resize-none border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 focus-visible:ring-violet-500"
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-              />
-            </div>
-
-            {/* Output Console (Right Column) */}
-            <div className="flex-grow flex flex-col min-h-0 space-y-2">
-              <Label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                Console Output
-              </Label>
-              <div className="flex-1 min-h-0 rounded-lg border border-zinc-200 dark:border-zinc-850 bg-zinc-950 dark:bg-black font-mono text-xs overflow-hidden flex flex-col">
-                {/* Console Header */}
-                <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 text-[10px] text-zinc-500 select-none">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>interactive-console</span>
-                  </div>
-                  {result && (
-                    <div className="flex items-center gap-3">
-                      <span>{result.status}</span>
-                      <span>{result.executionTimeMs}ms</span>
-                      {result.memoryUsage && <span>{result.memoryUsage}</span>}
-                    </div>
-                  )}
-                </div>
-                {/* Console Body */}
-                <div className="flex-1 p-3 overflow-auto custom-scrollbar text-zinc-100 select-text leading-relaxed">
-                  {isExecuting ? (
-                    <div className="h-full flex items-center justify-center text-zinc-500 gap-2">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-500" />
-                      <span>Compiling & executing...</span>
-                    </div>
-                  ) : result ? (
-                    <div className="space-y-2">
-                      {/* Program output */}
-                      {result.output ? (
-                        <pre className="whitespace-pre-wrap">{result.output}</pre>
-                      ) : result.status === "Success" ? (
-                        <div className="text-zinc-500 italic text-[11px]">
-                          Process exited with status code 0.
-                        </div>
-                      ) : null}
-
-                      {/* Program error */}
-                      {result.error && (
-                        <div className="text-red-400 pt-2 border-t border-zinc-800/30">
-                          <pre className="whitespace-pre-wrap">{result.error}</pre>
-                        </div>
-                      )}
-
-                      {/* Finished message */}
-                      <div className="text-emerald-500 dark:text-emerald-400 font-bold text-[10px] pt-2 border-t border-zinc-850/30">
-                        {`...Program finished with status ${result.status}`}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-zinc-650 text-center py-4 space-y-1">
-                      <Terminal className="h-5 w-5 opacity-30" />
-                      <p className="text-[11px]">Click Run to execute code</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Complexity Analysis Dialog */}
-      <Dialog open={isAnalysisOpen} onOpenChange={setIsAnalysisOpen}>
-        <DialogContent className="max-w-2xl bg-white dark:bg-[#0f0f23]/95 border-zinc-200 dark:border-zinc-800/50 backdrop-blur-xl text-zinc-900 dark:text-zinc-100 overflow-hidden shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-violet-500 animate-pulse" />
-              AI Complexity Analysis
-            </DialogTitle>
-            <DialogDescription className="text-zinc-500 dark:text-zinc-400">
-              Estimated time and space complexity using static analysis and AI model.
-            </DialogDescription>
-          </DialogHeader>
+      {activeDrawer && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-40 transition-opacity animate-in fade-in-0 duration-300 cursor-pointer"
+            onClick={() => {
+              setActiveDrawer(null)
+              setDrawerHeight(380)
+            }}
+          />
 
-          {isAnalyzing ? (
-            <div className="py-12 flex flex-col items-center justify-center space-y-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full blur-xl opacity-30 animate-pulse" />
-                <Sparkles className="h-10 w-10 text-violet-500 animate-pulse relative" />
-              </div>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">AI is analyzing your code structure...</p>
+          <div 
+            style={{ height: `${drawerHeight}px` }}
+            className={`fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-[#0f0f23]/95 border-t border-zinc-200 dark:border-zinc-800/80 rounded-t-3xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] flex flex-col select-none transition-all duration-75 ${
+              isDragging ? '' : 'transition-height'
+            }`}
+          >
+            <div 
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="w-full py-3.5 flex flex-col items-center justify-center cursor-ns-resize touch-none active:bg-zinc-50 dark:active:bg-white/[0.02] rounded-t-3xl border-b border-zinc-100/50 dark:border-zinc-800/20"
+            >
+              <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
             </div>
-          ) : analysis ? (
-            <div className="space-y-5 py-2">
-              {/* Source badge */}
-              <div className="flex justify-end">
-                <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold tracking-wide ${
-                  analysis.source === 'ai'
-                    ? 'bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-850'
-                    : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-850'
-                }`}>
-                  {analysis.source === 'ai' ? '✨ AI Verified' : '📐 Static Heuristics'}
-                </span>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Time Complexity */}
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 dark:from-blue-500/15 dark:to-cyan-500/5 border border-blue-200/50 dark:border-blue-500/10 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4.5 w-4.5 text-blue-500" />
-                    <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Time Complexity</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setActiveDrawer(null)
+                setDrawerHeight(380)
+              }}
+              className="absolute right-4 top-3 h-8 w-8 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </Button>
+
+            <div className="flex-grow p-5 overflow-auto select-text min-h-0 flex flex-col">
+              {activeDrawer === "input" && (
+                <div className="flex flex-col h-full space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">
+                      Standard Input (stdin)
+                    </h3>
+                    {needsInput && !customInput.trim() && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10 animate-pulse">
+                        ⚠️ Input expected by code
+                      </span>
+                    )}
                   </div>
-                  <p className="text-3xl font-black text-blue-600 dark:text-blue-400 font-mono tracking-tight">{analysis.timeComplexity}</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400/80 mt-2 leading-relaxed">{analysis.timeExplanation}</p>
-                </div>
-
-                {/* Space Complexity */}
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/5 dark:from-emerald-500/15 dark:to-teal-500/5 border border-emerald-200/50 dark:border-emerald-500/10 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Brain className="h-4.5 w-4.5 text-emerald-500" />
-                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">Space Complexity</span>
+                  <Textarea
+                    placeholder="Enter custom input values here (one value per line)..."
+                    className="flex-1 font-mono text-sm resize-none border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 focus-visible:ring-violet-500"
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                  />
+                  <div className="flex justify-end gap-3 pt-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setActiveDrawer(null)
+                        setDrawerHeight(380)
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white shadow-lg"
+                      onClick={handleEnterInput}
+                    >
+                      Enter & Run
+                    </Button>
                   </div>
-                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">{analysis.spaceComplexity}</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400/80 mt-2 leading-relaxed">{analysis.spaceExplanation}</p>
                 </div>
-              </div>
+              )}
 
-              {/* Detailed Explanation */}
-              <div className="p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-zinc-800/80 shadow-inner">
-                <div className="flex items-center gap-2 mb-2.5">
-                  <FileText className="h-4.5 w-4.5 text-zinc-500 dark:text-zinc-400" />
-                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Reasoning & Breakdown</span>
+              {activeDrawer === "output" && (
+                <div className="flex-grow flex flex-col min-h-0 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">
+                      Console Output
+                    </h3>
+                    {result && (
+                      <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {result.executionTimeMs}ms
+                        </span>
+                        {result.memoryUsage && <span>💾 {result.memoryUsage}</span>}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex-grow min-h-0 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 dark:bg-black font-mono text-xs overflow-hidden flex flex-col">
+                    <div className="flex items-center justify-between px-3 py-2 bg-zinc-900 border-b border-zinc-800 text-[10px] text-zinc-500 select-none">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>interactive-console</span>
+                      </div>
+                      <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-zinc-800">
+                        {result ? result.status : "executing"}
+                      </span>
+                    </div>
+                    <div className="flex-grow p-4 overflow-auto custom-scrollbar text-zinc-100 leading-relaxed select-text">
+                      {isExecuting ? (
+                        <div className="h-full flex items-center justify-center text-zinc-500 gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+                          <span>Compiling & executing code...</span>
+                        </div>
+                      ) : result ? (
+                        <div className="space-y-3">
+                          {result.output ? (
+                            <pre className="whitespace-pre-wrap">{result.output}</pre>
+                          ) : result.status === "Success" ? (
+                            <div className="text-zinc-500 italic text-[11px]">
+                              Process exited with status code 0.
+                            </div>
+                          ) : null}
+
+                          {result.error && (
+                            <div className="text-red-400 pt-2 border-t border-zinc-800/30">
+                              <pre className="whitespace-pre-wrap">{result.error}</pre>
+                            </div>
+                          )}
+
+                          <div className="text-emerald-500 dark:text-emerald-400 font-bold text-[10px] pt-2 border-t border-zinc-800/30">
+                            {`...Program finished with status ${result.status}`}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed font-sans whitespace-pre-line">{analysis.reasoning}</p>
-              </div>
+              )}
+
+              {activeDrawer === "analysis" && (
+                <div className="flex-grow flex flex-col min-h-0 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">
+                      AI Complexity Analysis
+                    </h3>
+                    {analysis && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                        analysis.source === 'ai'
+                          ? 'bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800'
+                          : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                      }`}>
+                        {analysis.source === 'ai' ? '✨ AI Analysis' : '📐 Heuristic'}
+                      </span>
+                    )}
+                  </div>
+
+                  {isAnalyzing ? (
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-3 py-8">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full blur-xl opacity-30 animate-pulse" />
+                        <Sparkles className="h-8 w-8 text-violet-500 animate-pulse relative" />
+                      </div>
+                      <p className="text-xs text-muted-foreground">AI is analyzing your code structure...</p>
+                    </div>
+                  ) : analysis ? (
+                    <div className="flex-1 overflow-auto custom-scrollbar space-y-4 pr-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-3.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-500/10">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Clock className="h-3.5 w-3.5 text-blue-500" />
+                            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Time Complexity</span>
+                          </div>
+                          <p className="text-xl font-black text-blue-600 dark:text-blue-400 font-mono leading-tight">{analysis.timeComplexity}</p>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 leading-normal">{analysis.timeExplanation}</p>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-500/10">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Brain className="h-3.5 w-3.5 text-emerald-500" />
+                            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">Space Complexity</span>
+                          </div>
+                          <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono leading-tight">{analysis.spaceComplexity}</p>
+                          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 leading-normal">{analysis.spaceExplanation}</p>
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-zinc-800">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <FileText className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-450" />
+                          <span className="text-[10px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Reasoning & Explanation</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-650 dark:text-zinc-300 leading-relaxed font-sans whitespace-pre-line">{analysis.reasoning}</p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="py-8 text-center text-zinc-500 dark:text-zinc-450 text-sm">
-              No analysis data available.
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        </>
+      )}
     </div>
   )
 }
