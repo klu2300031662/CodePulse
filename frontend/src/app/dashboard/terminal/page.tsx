@@ -172,7 +172,13 @@ export default function TerminalPage() {
   }
 
   const handleRunClick = () => {
-    setActiveDrawer("input")
+    if (needsInput) {
+      setActiveDrawer("input")
+      runCode()
+    } else {
+      setActiveDrawer("output")
+      runCode()
+    }
   }
 
   const handleEnterInput = () => {
@@ -282,7 +288,7 @@ export default function TerminalPage() {
       {activeDrawer && (
         <>
           <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-40 transition-opacity animate-in fade-in-0 duration-300 cursor-pointer"
+            className="fixed inset-0 lg:left-[260px] bg-black/60 backdrop-blur-[2px] z-40 transition-opacity animate-in fade-in-0 duration-300 cursor-pointer"
             onClick={() => {
               setActiveDrawer(null)
               setDrawerHeight(380)
@@ -291,7 +297,7 @@ export default function TerminalPage() {
 
           <div 
             style={{ height: `${drawerHeight}px` }}
-            className={`fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-[#0f0f23]/95 border-t border-zinc-200 dark:border-zinc-800/80 rounded-t-3xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] flex flex-col select-none transition-all duration-75 ${
+            className={`fixed left-0 lg:left-[260px] right-0 bottom-0 z-50 bg-white dark:bg-[#0f0f23]/95 border-t border-zinc-200 dark:border-zinc-800/80 rounded-t-3xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] flex flex-col select-none transition-all duration-75 ${
               isDragging ? '' : 'transition-height'
             }`}
           >
@@ -331,6 +337,28 @@ export default function TerminalPage() {
                       </span>
                     )}
                   </div>
+
+                  {isExecuting ? (
+                    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-950 p-3 font-mono text-xs text-zinc-400 flex items-center gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-500" />
+                      <span>Compiling & executing to get prompts...</span>
+                    </div>
+                  ) : (result?.output || result?.error) ? (
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-[10px] text-zinc-500 font-mono font-semibold uppercase tracking-wider">
+                        Program Output Prompt:
+                      </span>
+                      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-950 p-3 font-mono text-xs text-zinc-100 max-h-[100px] overflow-auto select-text">
+                        {result.output && <pre className="whitespace-pre-wrap">{result.output}</pre>}
+                        {result.error && (
+                          <pre className="whitespace-pre-wrap text-red-400 mt-1 text-[11px] leading-tight font-sans">
+                            {result.error.split('\n')[0]}
+                          </pre>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+
                   <Textarea
                     placeholder="Enter custom input values here (one value per line)..."
                     className="flex-1 font-mono text-sm resize-none border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 focus-visible:ring-violet-500"
