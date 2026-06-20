@@ -81,6 +81,11 @@ export default function TerminalPage() {
   const dragStartY = useRef(0)
   const dragStartHeight = useRef(0)
 
+  // Interactive console states
+  const [inputs, setInputs] = useState<string[]>([])
+  const [historyOutputs, setHistoryOutputs] = useState<string[]>([])
+  const [currentInputValue, setCurrentInputValue] = useState("")
+
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEYS.code, code)
   }, [code])
@@ -110,12 +115,18 @@ export default function TerminalPage() {
     return patterns.some(p => p.test(code))
   }, [code, language])
 
-  const runCode = async () => {
+  const runCode = async (currentInputs: string[] = []) => {
     setIsExecuting(true)
     setResult(null)
+    const stdin = currentInputs.length > 0 ? currentInputs.join("\n") + "\n" : ""
     try {
-      const res = await TerminalService.execute({ language, code, input: customInput })
+      const res = await TerminalService.execute({ language, code, input: stdin })
       setResult(res)
+      setHistoryOutputs(prev => {
+        const next = [...prev]
+        next[currentInputs.length] = res.output || ""
+        return next
+      })
     } catch (err) {
       const error = err as any
       setResult({
@@ -172,18 +183,55 @@ export default function TerminalPage() {
   }
 
   const handleRunClick = () => {
+    setInputs([])
+    setHistoryOutputs([])
+    setCurrentInputValue("")
     setActiveDrawer("console")
-    runCode()
+    runCode([])
   }
  
-  const handleEnterInput = () => {
-    runCode()
+  const handleTerminalEnter = () => {
+    const newVal = currentInputValue
+    const nextInputs = [...inputs, newVal]
+    setInputs(nextInputs)
+    setCurrentInputValue("")
+    runCode(nextInputs)
   }
 
   const handleAnalyzeClick = () => {
     setActiveDrawer("analysis")
     analyzeComplexity()
   }
+
+  const consoleText = useMemo(() => {
+    if (historyOutputs.length === 0) return ""
+    
+    let text = historyOutputs[0] || ""
+    for (let i = 0; i < inputs.length; i++) {
+      const typed = inputs[i]
+      const rawOutputCurrent = historyOutputs[i + 1] || ""
+      const rawOutputPrev = historyOutputs[i] || ""
+      
+      let remaining = ""
+      if (rawOutputCurrent.startsWith(rawOutputPrev)) {
+        remaining = rawOutputCurrent.substring(rawOutputPrev.length)
+      } else {
+        remaining = rawOutputCurrent
+      }
+      
+      text = text + typed + "\n" + remaining
+    }
+    return text
+  }, [inputs, historyOutputs])
+
+  const isWaitingForInput = useMemo(() => {
+    if (!needsInput) return false
+    if (isExecuting) return false
+    if (!result) return false
+    if (result.error && (result.error.includes("Compilation Error") || result.error.includes("error:"))) return false
+    if (result.status === "Success") return false
+    return true
+  }, [needsInput, isExecuting, result])
 
   const currentLang = LANGUAGES.find(l => l.value === language)
 
@@ -347,22 +395,52 @@ export default function TerminalPage() {
                     </div>
                     <div className="flex-grow p-5 overflow-auto custom-scrollbar text-zinc-100 leading-relaxed select-text font-mono text-sm flex flex-col justify-between">
                       <div className="flex-1">
-                        {isExecuting ? (
-                          <div className="h-full flex items-center justify-center text-zinc-500 gap-2 text-sm">
+                        {isExecuting && historyOutputs.length === 0 ? (
+                          <div className="h-full flex items-center justify-center text-zinc-500 gap-2 text-sm py-10">
                             <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
                             <span>Compiling & executing code...</span>
                           </div>
-                        ) : result ? (
+                        ) : consoleText || result ? (
                           <div className="space-y-4">
-                            {result.output ? (
-                              <pre className="whitespace-pre-wrap leading-relaxed">{result.output}</pre>
-                            ) : result.status === "Success" ? (
-                              <div className="text-zinc-500 italic text-sm">
-                                Process exited with status code 0.
-                              </div>
-                            ) : null}
+                            <div className="inline">
+                              <pre className="whitespace-pre-wrap leading-relaxed inline font-mono text-sm">{consoleText}</pre>
+                              
+                              {isExecuting && (
+                                <span className="inline-flex items-center gap-1.5 ml-2 text-zinc-500 font-mono text-xs">
+                                  <Loader2 className="h-3 w-3 animate-spin text-violet-500" />
+                                  <span>running...</span>
+                                </span>
+                              )}
 
-                            {result.error && (
+                              {!isExecuting && isWaitingForInput && (
+                                <span className="inline-flex items-center gap-1 ml-1 font-mono text-sm">
+                                  <input
+                                    type="text"
+                                    style={{ width: `${Math.max(100, (currentInputValue.length + 1) * 8.5)}px` }}
+                                    className="bg-transparent border-none outline-none text-zinc-100 font-mono text-sm p-0 focus:ring-0 caret-violet-500"
+                                    placeholder="Type input..."
+                                    value={currentInputValue}
+                                    onChange={(e) => setCurrentInputValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        handleTerminalEnter();
+                                      }
+                                    }}
+                                    autoFocus
+                                  />
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-5 w-5 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 shrink-0"
+                                    onClick={handleTerminalEnter}
+                                  >
+                                    <Play className="h-3 w-3 fill-current" />
+                                  </Button>
+                                </span>
+                              )}
+                            </div>
+
+                            {result?.error && (
                               <div className="text-red-400 pt-2 border-t border-zinc-800/30">
                                 <pre className="whitespace-pre-wrap leading-relaxed">
                                   {result.output ? result.error.split('\n')[0] : result.error}
@@ -370,41 +448,20 @@ export default function TerminalPage() {
                               </div>
                             )}
 
-                            <div className="text-emerald-500 dark:text-emerald-400 font-bold text-xs pt-2.5 border-t border-zinc-800/30">
-                              {`...Program finished with status ${result.status}`}
-                            </div>
+                            {result && !isExecuting && !isWaitingForInput && (
+                              <div className="text-emerald-500 dark:text-emerald-450 font-bold text-xs pt-3 mt-3 border-t border-zinc-800/30 select-none">
+                                {result.status === "Success" 
+                                  ? "...Program finished with exit code 0" 
+                                  : `...Program finished with status ${result.status}`}
+                                </div>
+                            )}
                           </div>
                         ) : (
-                          <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
+                          <div className="h-full flex items-center justify-center text-zinc-500 text-sm py-10">
                             <span>Press &quot;Run&quot; to execute the code.</span>
                           </div>
                         )}
                       </div>
-
-                      {/* Integrated Keyboard Input inside the black console */}
-                      {!isExecuting && needsInput && (
-                        <div className="flex flex-col space-y-1 font-mono mt-3 pt-3 border-t border-zinc-900/60 shrink-0">
-                          <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider select-none">
-                            Terminal Input (stdin):
-                          </span>
-                          <div className="flex gap-2 items-start">
-                            <span className="text-violet-500 font-bold mt-1 select-none">&gt;</span>
-                            <textarea
-                              placeholder="Type input here and press Enter to run..."
-                              className="flex-grow bg-transparent border-none outline-none text-zinc-100 font-mono text-sm p-1.5 focus:ring-0 resize-none h-12 caret-violet-500"
-                              value={customInput}
-                              onChange={(e) => setCustomInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                  e.preventDefault();
-                                  runCode();
-                                }
-                              }}
-                              autoFocus
-                            />
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
