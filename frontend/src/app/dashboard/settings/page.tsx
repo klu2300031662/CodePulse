@@ -254,13 +254,47 @@ export default function SettingsPage() {
 
           {activeSection === "privacy" && (
             <SectionCard title="Privacy & Data" description="How we handle your information.">
-              <div className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400">
-                <p>Your data is stored securely and never shared with third parties.</p>
-                <ul className="space-y-2 list-disc list-inside">
-                  <li>Platform usernames are used solely for fetching public analytics</li>
-                  <li>Code submitted through the Terminal is not stored on our servers</li>
-                  <li>Session data is stored locally and cleared on logout</li>
-                </ul>
+              <div className="space-y-4 text-sm text-zinc-650 dark:text-zinc-400 leading-relaxed">
+                <p className="font-semibold text-zinc-800 dark:text-zinc-200">
+                  Your privacy is our priority. Your data is stored securely, encrypted in transit, and never shared or sold to third parties.
+                </p>
+                
+                <div className="space-y-3.5">
+                  <div className="space-y-0.5">
+                    <h4 className="font-bold text-zinc-700 dark:text-zinc-300">Platform Integrations</h4>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-450">
+                      Platform usernames (LeetCode, Codeforces, etc.) are used solely to fetch public contest statistics, badges, and solved problems. We never request or store your platform passwords.
+                    </p>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <h4 className="font-bold text-zinc-700 dark:text-zinc-300">Code Submission Security</h4>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-450">
+                      Any source code you execute through the Terminal Analyzer runs inside temporary, isolated sandboxes. The code and its runtime outputs are deleted immediately after execution finishes and are never stored persistently on our servers.
+                    </p>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <h4 className="font-bold text-zinc-700 dark:text-zinc-300">Authentication & Session Data</h4>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-450">
+                      We use secure JSON Web Tokens (JWT) and OAuth 2.0 (Google Login) for authentication. Session tokens are stored locally on your device and are cleared immediately upon logging out.
+                    </p>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <h4 className="font-bold text-zinc-700 dark:text-zinc-300">Cookies & Tracking</h4>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-450">
+                      CodePulse only uses essential cookies strictly necessary for maintaining your authenticated session. We do not embed ad trackers, retargeting pixels, or invasive third-party analytics.
+                    </p>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <h4 className="font-bold text-zinc-700 dark:text-zinc-300">Data Deletion & Portability</h4>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-450">
+                      You maintain full ownership of your data. You can delete your entire account, linked profiles, and submission metrics at any time through the &quot;Danger Zone&quot; tab. This action instantly and permanently erases your records from our databases.
+                    </p>
+                  </div>
+                </div>
               </div>
             </SectionCard>
           )}
