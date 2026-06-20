@@ -98,6 +98,7 @@ public class WebSecurityConfig {
                 "/oauth2/**",
                 "/login/**")
             .permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/feedback").permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .anyRequest().authenticated());
 

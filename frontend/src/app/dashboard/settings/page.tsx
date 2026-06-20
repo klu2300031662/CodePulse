@@ -38,7 +38,6 @@ const sections = [
   { id: "account", label: "Account", icon: User },
   { id: "platforms", label: "Linked Platforms", icon: Link2 },
   { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "appearance", label: "Appearance", icon: Palette },
   { id: "privacy", label: "Privacy", icon: Shield },
   { id: "danger", label: "Danger Zone", icon: Trash2 },
 ]
@@ -224,31 +223,6 @@ export default function SettingsPage() {
                       />
                     </button>
                   </div>
-                ))}
-              </div>
-            </SectionCard>
-          )}
-
-          {activeSection === "appearance" && (
-            <SectionCard title="Theme" description="Select your preferred color scheme.">
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { value: "light", label: "Light", icon: Sun },
-                  { value: "dark", label: "Dark", icon: Moon },
-                  { value: "system", label: "System", icon: Monitor },
-                ].map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { setTheme(opt.value); showSaved() }}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
-                      theme === opt.value
-                        ? "border-violet-300 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 shadow-sm"
-                        : "border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-violet-200 dark:hover:border-violet-500/20"
-                    }`}
-                  >
-                    <opt.icon className="h-6 w-6" />
-                    <span className="text-sm font-medium">{opt.label}</span>
-                  </button>
                 ))}
               </div>
             </SectionCard>

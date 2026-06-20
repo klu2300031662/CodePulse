@@ -53,10 +53,27 @@ public class FeedbackController {
                 .orElseThrow(() -> new UnauthorizedException("User account not found. Please log in again."));
     }
 
+    private User getCurrentUserOrNull() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return null;
+            }
+            Object principal = authentication.getPrincipal();
+            if (!(principal instanceof UserDetailsImpl)) {
+                return null;
+            }
+            UserDetailsImpl userDetails = (UserDetailsImpl) principal;
+            return userRepository.findByUsername(userDetails.getUsername()).orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // ── POST /api/feedback — Submit feedback ──
     @PostMapping
     public ResponseEntity<?> submitFeedback(@RequestBody FeedbackPayload payload) {
-        User user = getCurrentUser();
+        User user = getCurrentUserOrNull();
 
         // Validate category
         if (payload.getCategory() == null || !VALID_CATEGORIES.contains(payload.getCategory().toLowerCase())) {
@@ -89,13 +106,14 @@ public class FeedbackController {
         );
 
         feedbackRepository.save(feedback);
-        logger.info("Feedback submitted by user '{}': category={}, rating={}",
-                user.getUsername(), payload.getCategory(), payload.getRating());
+        logger.info("Feedback submitted by {}: category={}, rating={}",
+                (user != null ? "user '" + user.getUsername() + "'" : "anonymous user"),
+                payload.getCategory(), payload.getRating());
 
         // Send email notification to admin asynchronously to prevent blocking the response
-        final String senderName = user.getName();
-        final String senderUsername = user.getUsername();
-        final String senderEmail = user.getEmail();
+        final String senderName = (user != null) ? user.getName() : "Anonymous User";
+        final String senderUsername = (user != null) ? user.getUsername() : "anonymous";
+        final String senderEmail = (user != null) ? user.getEmail() : "No Email";
         final String feedbackCategory = payload.getCategory();
         final Integer feedbackRating = payload.getRating();
         final String feedbackMessage = payload.getMessage();
