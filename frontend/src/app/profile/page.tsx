@@ -3,7 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ActivityHeatmap } from "@/components/dashboard/heatmap"
-import { Calendar, Plus, Pencil, Trash2, X, Sparkles } from "lucide-react"
+import { Calendar, Plus, Pencil, Trash2, X, Sparkles, ArrowLeft, MessageSquareHeart } from "lucide-react"
+import Link from "next/link"
+import FeedbackModal from "@/components/FeedbackModal"
 
 import { useEffect, useState } from "react"
 import { useAuthStore } from "@/lib/store/auth.store"
@@ -46,6 +48,7 @@ export default function ProfilePage() {
   const [editIdx, setEditIdx] = useState<number | null>(null)
   const [skillName, setSkillName] = useState("")
   const [skillLevel, setSkillLevel] = useState<Skill["level"]>("Beginner")
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
 
   useEffect(() => {
     setSkills(getStoredSkills())
@@ -53,11 +56,11 @@ export default function ProfilePage() {
   }, [authUser]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
-    return <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] flex items-center justify-center text-muted-foreground">Loading...</div>
+    return <div className="min-h-screen bg-zinc-50 dark:bg-[#06061a] flex items-center justify-center text-muted-foreground">Loading...</div>
   }
 
   if (!authUser) {
-    return <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] flex items-center justify-center text-muted-foreground">Please log in to view profile.</div>
+    return <div className="min-h-screen bg-zinc-50 dark:bg-[#06061a] flex items-center justify-center text-muted-foreground">Please log in to view profile.</div>
   }
 
   const name = authUser.name || authUser.fullName || authUser.username || "User"
@@ -99,8 +102,26 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-foreground">
-      <div className="max-w-6xl mx-auto space-y-8 p-6 md:p-8">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#06061a] text-foreground flex flex-col">
+      {/* Header bar */}
+      <header className="border-b border-zinc-200 dark:border-white/[0.06] bg-white/80 dark:bg-[#0a0a1f]/60 backdrop-blur-xl sticky top-0 z-30 px-6 py-4 flex items-center justify-between shrink-0 animate-fade-in">
+        <Link href="/dashboard" className="flex items-center gap-2 text-zinc-500 hover:text-violet-600 dark:text-zinc-400 dark:hover:text-violet-400 transition-all duration-300 text-sm font-semibold group">
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform duration-300" />
+          <span>Back to Dashboard</span>
+        </Link>
+        
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setFeedbackOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-all duration-200"
+          >
+            <MessageSquareHeart className="h-4 w-4 text-violet-500 dark:text-violet-400" />
+            <span>Feedback</span>
+          </button>
+        </div>
+      </header>
+
+      <div className="flex-1 max-w-6xl mx-auto w-full space-y-8 p-6 md:p-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
 
           {/* Left Sidebar */}
@@ -309,6 +330,9 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Feedback Modal */}
+      <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   )
 }

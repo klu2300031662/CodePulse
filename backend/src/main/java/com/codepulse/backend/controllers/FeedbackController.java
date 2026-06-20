@@ -6,6 +6,7 @@ import com.codepulse.backend.models.Feedback;
 import com.codepulse.backend.models.User;
 import com.codepulse.backend.repository.FeedbackRepository;
 import com.codepulse.backend.repository.UserRepository;
+import com.codepulse.backend.security.services.EmailService;
 import com.codepulse.backend.security.services.UserDetailsImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,9 @@ public class FeedbackController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private EmailService emailService;
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -87,6 +91,29 @@ public class FeedbackController {
         feedbackRepository.save(feedback);
         logger.info("Feedback submitted by user '{}': category={}, rating={}",
                 user.getUsername(), payload.getCategory(), payload.getRating());
+
+        // Send email notification to admin asynchronously to prevent blocking the response
+        final String senderName = user.getName();
+        final String senderUsername = user.getUsername();
+        final String senderEmail = user.getEmail();
+        final String feedbackCategory = payload.getCategory();
+        final Integer feedbackRating = payload.getRating();
+        final String feedbackMessage = payload.getMessage();
+
+        new Thread(() -> {
+            try {
+                emailService.sendFeedbackEmail(
+                        senderName,
+                        senderUsername,
+                        senderEmail,
+                        feedbackCategory,
+                        feedbackRating,
+                        feedbackMessage
+                );
+            } catch (Exception e) {
+                logger.error("Error sending feedback email to admin: {}", e.getMessage(), e);
+            }
+        }).start();
 
         return ResponseEntity.ok(Map.of(
                 "message", "Thank you for your feedback!",

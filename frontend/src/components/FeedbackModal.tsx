@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import feedbackService, { type FeedbackPayload } from "@/lib/api/feedback.service"
 import { MessageSquareHeart, Bug, Lightbulb, Wrench, MessageCircle, Star, Send, CheckCircle2, Loader2 } from "lucide-react"
+import { useAuthStore } from "@/lib/store/auth.store"
 
 interface FeedbackModalProps {
   open: boolean
@@ -20,6 +21,7 @@ const categories = [
 ]
 
 export default function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
+  const isGuest = useAuthStore((s) => s.isGuest)
   const [category, setCategory] = useState<FeedbackPayload["category"]>("general")
   const [rating, setRating] = useState(0)
   const [hoveredStar, setHoveredStar] = useState(0)
@@ -46,6 +48,7 @@ export default function FeedbackModal({ open, onOpenChange }: FeedbackModalProps
   }
 
   const handleSubmit = async () => {
+    if (isGuest) return
     if (rating === 0) {
       setError("Please select a rating.")
       return
@@ -112,7 +115,7 @@ export default function FeedbackModal({ open, onOpenChange }: FeedbackModalProps
                 </div>
               </div>
             </DialogHeader>
-
+ 
             <div className="space-y-5 pt-1">
               {/* Category Selector */}
               <div className="space-y-2">
@@ -137,7 +140,7 @@ export default function FeedbackModal({ open, onOpenChange }: FeedbackModalProps
                   })}
                 </div>
               </div>
-
+ 
               {/* Star Rating */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Rating</label>
@@ -145,10 +148,11 @@ export default function FeedbackModal({ open, onOpenChange }: FeedbackModalProps
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
+                      disabled={isGuest}
                       onClick={() => setRating(star)}
                       onMouseEnter={() => setHoveredStar(star)}
                       onMouseLeave={() => setHoveredStar(0)}
-                      className="group relative p-0.5 transition-transform duration-150 hover:scale-125"
+                      className="group relative p-0.5 transition-transform duration-150 hover:scale-125 disabled:opacity-50 disabled:hover:scale-100"
                     >
                       <Star
                         className={`h-7 w-7 transition-colors duration-200 ${
@@ -166,7 +170,7 @@ export default function FeedbackModal({ open, onOpenChange }: FeedbackModalProps
                   )}
                 </div>
               </div>
-
+ 
               {/* Message */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -177,11 +181,19 @@ export default function FeedbackModal({ open, onOpenChange }: FeedbackModalProps
                 </div>
                 <Textarea
                   value={message}
+                  disabled={isGuest}
                   onChange={(e) => setMessage(e.target.value.slice(0, 500))}
-                  placeholder="Tell us what you love, what's broken, or what you'd like to see..."
-                  className="min-h-[100px] resize-none border-zinc-200/60 dark:border-zinc-700/40 focus:border-violet-400 dark:focus:border-violet-500/50 transition-colors text-sm"
+                  placeholder={isGuest ? "Feedback input is disabled in Guest Mode." : "Tell us what you love, what's broken, or what you'd like to see..."}
+                  className="min-h-[100px] resize-none border-zinc-200/60 dark:border-zinc-700/40 focus:border-violet-400 dark:focus:border-violet-500/50 transition-colors text-sm disabled:opacity-50"
                 />
               </div>
+ 
+              {/* Guest Warning */}
+              {isGuest && (
+                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 animate-in fade-in-0 slide-in-from-top-1 duration-200 font-medium">
+                  ⚠️ Feedback submission is disabled in Guest Mode. Please sign in or create an account to share feedback!
+                </div>
+              )}
 
               {/* Error Message */}
               {error && (
@@ -190,7 +202,7 @@ export default function FeedbackModal({ open, onOpenChange }: FeedbackModalProps
                 </div>
               )}
             </div>
-
+ 
             <DialogFooter className="pt-2">
               <Button
                 variant="ghost"
@@ -202,7 +214,7 @@ export default function FeedbackModal({ open, onOpenChange }: FeedbackModalProps
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting || !message.trim() || rating === 0}
+                disabled={isSubmitting || !message.trim() || rating === 0 || isGuest}
                 className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white border-0 shadow-lg shadow-violet-500/15 hover:shadow-violet-500/25 transition-all duration-300 disabled:opacity-50 disabled:shadow-none"
               >
                 {isSubmitting ? (

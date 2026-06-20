@@ -17,9 +17,11 @@ import {
   Moon,
   Menu,
   X,
+  MessageSquareHeart,
 } from "lucide-react"
 import { useAuthStore } from "@/lib/store/auth.store"
 import { useTheme } from "next-themes"
+import FeedbackModal from "@/components/FeedbackModal"
 import { Button } from "@/components/ui/button"
 import ProfileDropdown from "@/components/dashboard/ProfileDropdown"
 import GlobalSearch from "@/components/dashboard/GlobalSearch"
@@ -44,6 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const { contestsCache, setContestsCache } = useDashboardStore()
 
   // Pre-fetch contests on layout mount so Contests tab is instant
@@ -121,7 +124,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Bottom */}
-        <div className="border-t border-zinc-200 dark:border-white/[0.06] p-3">
+        <div className="border-t border-zinc-200 dark:border-white/[0.06] p-3 space-y-1">
+          <button
+            onClick={() => setFeedbackOpen(true)}
+            className="w-full group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-500 border border-transparent text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50 dark:hover:bg-violet-500/[0.06] hover:border-violet-300 dark:hover:border-violet-500/25 hover:shadow-lg hover:shadow-violet-500/10 dark:hover:shadow-violet-500/15 hover:-translate-y-[2px] relative overflow-hidden text-left"
+          >
+            <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-violet-500 blur-2xl opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-500" />
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-500 to-blue-500 opacity-0 group-hover:opacity-50 transition-opacity duration-300" />
+            <MessageSquareHeart className="relative h-[18px] w-[18px] text-zinc-400 dark:text-zinc-600 group-hover:text-violet-500 dark:group-hover:text-violet-400 transition-all duration-300" />
+            <span className="relative">Feedback</span>
+          </button>
+
           <Link
             href="/dashboard/settings"
             className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-500 border overflow-hidden relative ${
@@ -191,6 +204,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )
               })}
             </nav>
+
+            {/* Bottom buttons for Mobile drawer */}
+            <div className="border-t border-zinc-200 dark:border-white/[0.06] p-3 space-y-1">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setFeedbackOpen(true)
+                }}
+                className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06] text-left"
+              >
+                <MessageSquareHeart className="h-[18px] w-[18px] text-zinc-400 dark:text-zinc-600" />
+                <span>Feedback</span>
+              </button>
+              <Link
+                href="/dashboard/settings"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                  pathname?.startsWith("/dashboard/settings")
+                    ? "bg-violet-50 dark:bg-violet-500/[0.08] text-violet-700 dark:text-white"
+                    : "text-zinc-500 hover:text-violet-700 dark:hover:text-white hover:bg-violet-50/80 dark:hover:bg-violet-500/[0.06]"
+                }`}
+              >
+                <Settings className="h-[18px] w-[18px] text-zinc-400 dark:text-zinc-600" />
+                <span>Settings</span>
+              </Link>
+            </div>
           </aside>
         </div>
       )}
@@ -253,6 +292,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </main>
+
+      {/* Feedback Modal */}
+      <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </div>
   )
 }

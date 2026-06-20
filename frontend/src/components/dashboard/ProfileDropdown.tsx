@@ -73,7 +73,7 @@ export default function ProfileDropdown() {
         <DropdownMenuItem
           id="dropdown-edit-profile"
           className="px-3 py-2.5 cursor-pointer text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white focus:text-zinc-900 dark:focus:text-white focus:bg-zinc-50 dark:focus:bg-white/5 rounded-lg transition-colors"
-          onClick={() => router.push("/settings")}
+          onClick={() => router.push("/dashboard/settings")}
         >
           <Edit className="mr-3 h-4 w-4 text-blue-500 dark:text-blue-400" />
           Edit Profile
