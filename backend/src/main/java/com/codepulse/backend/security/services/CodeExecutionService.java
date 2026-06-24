@@ -8,15 +8,32 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 @Service
 public class CodeExecutionService {
 
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
+    private final Semaphore executionSemaphore = new Semaphore(10); // Limit to 10 concurrent processes
 
     public CodeExecutionResponse executeCode(CodeExecutionRequest request) {
         String lang = request.getLanguage().toLowerCase();
+        
+        try {
+            if (!executionSemaphore.tryAcquire(5, TimeUnit.SECONDS)) {
+                return CodeExecutionResponse.builder()
+                        .status("Error")
+                        .error("Server is busy. Please try again in a few seconds.")
+                        .build();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return CodeExecutionResponse.builder()
+                    .status("Error")
+                    .error("Execution interrupted.")
+                    .build();
+        }
         
         try {
             return switch (lang) {
@@ -35,73 +52,136 @@ public class CodeExecutionService {
                     .status("Error")
                     .error("Execution failed: " + e.getMessage())
                     .build();
+        } finally {
+            executionSemaphore.release();
+        }
+    }
+
+    private void deleteDirectory(File dir) {
+        if (dir != null && dir.exists()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    f.delete();
+                }
+            }
+            dir.delete();
         }
     }
 
     private CodeExecutionResponse runPython(String code, String input) throws Exception {
         File file = createTempFile("Main", ".py", code);
-        return executeProcess(new String[]{"python", file.getAbsolutePath()}, file.getParentFile(), input, code);
+        File dir = file.getParentFile();
+        try {
+            return executeProcess(new String[]{"python", file.getAbsolutePath()}, dir, input, code);
+        } finally {
+            deleteDirectory(dir);
+        }
     }
     
     private CodeExecutionResponse runJavaScript(String code, String input) throws Exception {
         File file = createTempFile("main", ".js", code);
-        return executeProcess(new String[]{"node", file.getAbsolutePath()}, file.getParentFile(), input, code);
+        File dir = file.getParentFile();
+        try {
+            return executeProcess(new String[]{"node", file.getAbsolutePath()}, dir, input, code);
+        } finally {
+            deleteDirectory(dir);
+        }
     }
 
     private CodeExecutionResponse runJava(String code, String input) throws Exception {
         // Java requires class name to match file name. Assume class Main.
         File file = createTempFile("Main", ".java", code);
-        
-        // Compile
-        ProcessBuilder pbCompile = new ProcessBuilder("javac", file.getName());
-        pbCompile.directory(file.getParentFile());
-        Process compileProc = pbCompile.start();
-        boolean compiled = compileProc.waitFor(10, TimeUnit.SECONDS);
-        
-        if (!compiled || compileProc.exitValue() != 0) {
-            String error = new String(compileProc.getErrorStream().readAllBytes());
-            return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\n" + error).build();
-        }
+        File dir = file.getParentFile();
+        Process compileProc = null;
+        try {
+            // Compile
+            ProcessBuilder pbCompile = new ProcessBuilder("javac", file.getName());
+            pbCompile.directory(dir);
+            compileProc = pbCompile.start();
+            boolean compiled = compileProc.waitFor(10, TimeUnit.SECONDS);
+            
+            if (!compiled) {
+                compileProc.destroyForcibly();
+                return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\nCompilation Timeout (10 seconds)").build();
+            }
+            
+            if (compileProc.exitValue() != 0) {
+                String error = new String(compileProc.getErrorStream().readAllBytes());
+                return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\n" + error).build();
+            }
 
-        // Run
-        return executeProcess(new String[]{"java", "Main"}, file.getParentFile(), input, code);
+            // Run
+            return executeProcess(new String[]{"java", "Main"}, dir, input, code);
+        } finally {
+            if (compileProc != null && compileProc.isAlive()) {
+                compileProc.destroyForcibly();
+            }
+            deleteDirectory(dir);
+        }
     }
 
     private CodeExecutionResponse runC(String code, String input) throws Exception {
         File sourceFile = createTempFile("main", ".c", code);
+        File dir = sourceFile.getParentFile();
         String exeName = System.getProperty("os.name").toLowerCase().contains("win") ? "main.exe" : "./main";
+        Process compileProc = null;
+        try {
+            // Compile with gcc
+            ProcessBuilder pbCompile = new ProcessBuilder("gcc", sourceFile.getName(), "-o", "main");
+            pbCompile.directory(dir);
+            compileProc = pbCompile.start();
+            boolean compiled = compileProc.waitFor(10, TimeUnit.SECONDS);
 
-        // Compile with gcc
-        ProcessBuilder pbCompile = new ProcessBuilder("gcc", sourceFile.getName(), "-o", "main");
-        pbCompile.directory(sourceFile.getParentFile());
-        Process compileProc = pbCompile.start();
-        boolean compiled = compileProc.waitFor(10, TimeUnit.SECONDS);
+            if (!compiled) {
+                compileProc.destroyForcibly();
+                return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\nCompilation Timeout (10 seconds)").build();
+            }
 
-        if (!compiled || compileProc.exitValue() != 0) {
-            String error = new String(compileProc.getErrorStream().readAllBytes());
-            return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\n" + error).build();
+            if (compileProc.exitValue() != 0) {
+                String error = new String(compileProc.getErrorStream().readAllBytes());
+                return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\n" + error).build();
+            }
+
+            return executeProcess(new String[]{exeName}, dir, input, code);
+        } finally {
+            if (compileProc != null && compileProc.isAlive()) {
+                compileProc.destroyForcibly();
+            }
+            deleteDirectory(dir);
         }
-
-        return executeProcess(new String[]{exeName}, sourceFile.getParentFile(), input, code);
     }
 
     private CodeExecutionResponse runCpp(String code, String input) throws Exception {
         File sourceFile = createTempFile("main", ".cpp", code);
+        File dir = sourceFile.getParentFile();
         String exeName = System.getProperty("os.name").toLowerCase().contains("win") ? "main.exe" : "./main";
-        
-        // Compile
-        ProcessBuilder pbCompile = new ProcessBuilder("g++", sourceFile.getName(), "-o", "main");
-        pbCompile.directory(sourceFile.getParentFile());
-        Process compileProc = pbCompile.start();
-        boolean compiled = compileProc.waitFor(10, TimeUnit.SECONDS);
-        
-        if (!compiled || compileProc.exitValue() != 0) {
-            String error = new String(compileProc.getErrorStream().readAllBytes());
-            return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\n" + error).build();
-        }
+        Process compileProc = null;
+        try {
+            // Compile
+            ProcessBuilder pbCompile = new ProcessBuilder("g++", sourceFile.getName(), "-o", "main");
+            pbCompile.directory(dir);
+            compileProc = pbCompile.start();
+            boolean compiled = compileProc.waitFor(10, TimeUnit.SECONDS);
+            
+            if (!compiled) {
+                compileProc.destroyForcibly();
+                return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\nCompilation Timeout (10 seconds)").build();
+            }
 
-        // Run
-        return executeProcess(new String[]{exeName}, sourceFile.getParentFile(), input, code);
+            if (compileProc.exitValue() != 0) {
+                String error = new String(compileProc.getErrorStream().readAllBytes());
+                return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\n" + error).build();
+            }
+
+            // Run
+            return executeProcess(new String[]{exeName}, dir, input, code);
+        } finally {
+            if (compileProc != null && compileProc.isAlive()) {
+                compileProc.destroyForcibly();
+            }
+            deleteDirectory(dir);
+        }
     }
 
     private File createTempFile(String prefix, String suffix, String content) throws IOException {
@@ -116,11 +196,15 @@ public class CodeExecutionService {
         StringBuilder output = new StringBuilder();
         StringBuilder error = new StringBuilder();
         long startTime = System.currentTimeMillis();
+        Process process = null;
+        Thread outThread = null;
+        Thread errThread = null;
         
         try {
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(dir);
-            Process process = pb.start();
+            process = pb.start();
+            final Process finalProcess = process;
 
             // Write input
             if (input != null && !input.isEmpty()) {
@@ -131,8 +215,8 @@ public class CodeExecutionService {
             }
 
             // Read output
-            Thread outThread = new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            outThread = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         output.append(line).append("\n");
@@ -141,8 +225,8 @@ public class CodeExecutionService {
             });
             
             // Read error
-            Thread errThread = new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+            errThread = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getErrorStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         error.append(line).append("\n");
@@ -166,8 +250,8 @@ public class CodeExecutionService {
                         .build();
             }
             
-            outThread.join();
-            errThread.join();
+            outThread.join(1000);
+            errThread.join(1000);
 
             return CodeExecutionResponse.builder()
                     .status(process.exitValue() == 0 ? "Success" : "Error")
@@ -184,6 +268,16 @@ public class CodeExecutionService {
                     .status("Error")
                     .error(e.getMessage())
                     .build();
+        } finally {
+            if (process != null && process.isAlive()) {
+                process.destroyForcibly();
+            }
+            if (outThread != null && outThread.isAlive()) {
+                outThread.interrupt();
+            }
+            if (errThread != null && errThread.isAlive()) {
+                errThread.interrupt();
+            }
         }
     }
 

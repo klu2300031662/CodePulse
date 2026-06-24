@@ -127,6 +127,8 @@ export default function TerminalPage() {
         next[currentInputs.length] = res.output || ""
         return next
       })
+      // Automatically open the drawer/popup to show execution result if it was closed
+      setActiveDrawer("console")
     } catch (err) {
       const error = err as any
       setResult({
@@ -135,6 +137,8 @@ export default function TerminalPage() {
         executionTimeMs: 0, memoryUsage: "0 MB",
         timeComplexityEstimate: "N/A", spaceComplexityEstimate: "N/A"
       })
+      // Automatically open the drawer/popup to show the error if it was closed
+      setActiveDrawer("console")
     } finally {
       setIsExecuting(false)
     }
