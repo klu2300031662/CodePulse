@@ -72,8 +72,9 @@ public class CodeExecutionService {
     private CodeExecutionResponse runPython(String code, String input) throws Exception {
         File file = createTempFile("Main", ".py", code);
         File dir = file.getParentFile();
+        String pythonCmd = System.getProperty("os.name").toLowerCase().contains("win") ? "python" : "python3";
         try {
-            return executeProcess(new String[]{"python", file.getAbsolutePath()}, dir, input, code);
+            return executeProcess(new String[]{pythonCmd, file.getAbsolutePath()}, dir, input, code);
         } finally {
             deleteDirectory(dir);
         }
@@ -112,7 +113,7 @@ public class CodeExecutionService {
             }
 
             // Run
-            return executeProcess(new String[]{"java", "Main"}, dir, input, code);
+            return executeProcess(new String[]{"java", "-cp", ".", "Main"}, dir, input, code);
         } finally {
             if (compileProc != null && compileProc.isAlive()) {
                 compileProc.destroyForcibly();
@@ -124,11 +125,12 @@ public class CodeExecutionService {
     private CodeExecutionResponse runC(String code, String input) throws Exception {
         File sourceFile = createTempFile("main", ".c", code);
         File dir = sourceFile.getParentFile();
-        String exeName = System.getProperty("os.name").toLowerCase().contains("win") ? "main.exe" : "./main";
+        boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+        File exeFile = new File(dir, isWindows ? "main.exe" : "main");
         Process compileProc = null;
         try {
             // Compile with gcc
-            ProcessBuilder pbCompile = new ProcessBuilder("gcc", sourceFile.getName(), "-o", "main");
+            ProcessBuilder pbCompile = new ProcessBuilder("gcc", sourceFile.getName(), "-o", exeFile.getName());
             pbCompile.directory(dir);
             compileProc = pbCompile.start();
             boolean compiled = compileProc.waitFor(10, TimeUnit.SECONDS);
@@ -143,7 +145,11 @@ public class CodeExecutionService {
                 return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\n" + error).build();
             }
 
-            return executeProcess(new String[]{exeName}, dir, input, code);
+            if (!isWindows) {
+                exeFile.setExecutable(true);
+            }
+
+            return executeProcess(new String[]{exeFile.getAbsolutePath()}, dir, input, code);
         } finally {
             if (compileProc != null && compileProc.isAlive()) {
                 compileProc.destroyForcibly();
@@ -155,11 +161,12 @@ public class CodeExecutionService {
     private CodeExecutionResponse runCpp(String code, String input) throws Exception {
         File sourceFile = createTempFile("main", ".cpp", code);
         File dir = sourceFile.getParentFile();
-        String exeName = System.getProperty("os.name").toLowerCase().contains("win") ? "main.exe" : "./main";
+        boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+        File exeFile = new File(dir, isWindows ? "main.exe" : "main");
         Process compileProc = null;
         try {
             // Compile
-            ProcessBuilder pbCompile = new ProcessBuilder("g++", sourceFile.getName(), "-o", "main");
+            ProcessBuilder pbCompile = new ProcessBuilder("g++", sourceFile.getName(), "-o", exeFile.getName());
             pbCompile.directory(dir);
             compileProc = pbCompile.start();
             boolean compiled = compileProc.waitFor(10, TimeUnit.SECONDS);
@@ -174,8 +181,12 @@ public class CodeExecutionService {
                 return CodeExecutionResponse.builder().status("Error").error("Compilation Error:\n" + error).build();
             }
 
+            if (!isWindows) {
+                exeFile.setExecutable(true);
+            }
+
             // Run
-            return executeProcess(new String[]{exeName}, dir, input, code);
+            return executeProcess(new String[]{exeFile.getAbsolutePath()}, dir, input, code);
         } finally {
             if (compileProc != null && compileProc.isAlive()) {
                 compileProc.destroyForcibly();
@@ -218,8 +229,17 @@ public class CodeExecutionService {
             outThread = new Thread(() -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getInputStream()))) {
                     String line;
+                    int totalChars = 0;
+                    final int MAX_CHARS = 100_000;
                     while ((line = reader.readLine()) != null) {
-                        output.append(line).append("\n");
+                        if (totalChars < MAX_CHARS) {
+                            output.append(line).append("\n");
+                            totalChars += line.length() + 1;
+                        } else {
+                            output.append("\n[Output truncated due to size limit]\n");
+                            finalProcess.destroyForcibly();
+                            break;
+                        }
                     }
                 } catch (IOException ignored) {}
             });
@@ -228,8 +248,17 @@ public class CodeExecutionService {
             errThread = new Thread(() -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(finalProcess.getErrorStream()))) {
                     String line;
+                    int totalChars = 0;
+                    final int MAX_CHARS = 100_000;
                     while ((line = reader.readLine()) != null) {
-                        error.append(line).append("\n");
+                        if (totalChars < MAX_CHARS) {
+                            error.append(line).append("\n");
+                            totalChars += line.length() + 1;
+                        } else {
+                            error.append("\n[Error output truncated due to size limit]\n");
+                            finalProcess.destroyForcibly();
+                            break;
+                        }
                     }
                 } catch (IOException ignored) {}
             });
@@ -238,15 +267,15 @@ public class CodeExecutionService {
             errThread.start();
 
             // Wait with timeout
-            boolean finished = process.waitFor(15, TimeUnit.SECONDS);
+            boolean finished = process.waitFor(10, TimeUnit.SECONDS);
             long endTime = System.currentTimeMillis();
 
             if (!finished) {
                 process.destroyForcibly();
                 return CodeExecutionResponse.builder()
                         .status("Error")
-                        .error("Time Limit Exceeded (15 seconds)")
-                        .executionTimeMs(15000)
+                        .error("Time Limit Exceeded (10 seconds)")
+                        .executionTimeMs(10000)
                         .build();
             }
             

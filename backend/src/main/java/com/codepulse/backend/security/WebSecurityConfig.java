@@ -96,7 +96,8 @@ public class WebSecurityConfig {
                 "/api/auth/**",
                 "/api/test/**",
                 "/oauth2/**",
-                "/login/**")
+                "/login/**",
+                "/api/execute")
             .permitAll()
             .requestMatchers(HttpMethod.POST, "/api/feedback").permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

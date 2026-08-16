@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const WANDBOX_API = 'https://wandbox.org/api/compile.json';
-
-// Map our language values to Wandbox compiler names
-const LANGUAGE_MAP: Record<string, { compiler: string; filename: string }> = {
-  c:          { compiler: 'gcc-13.2.0-c',     filename: 'prog.c' },
-  cpp:        { compiler: 'gcc-13.2.0',        filename: 'prog.cc' },
-  java:       { compiler: 'openjdk-jdk-22+36', filename: 'prog.java' },
-  python:     { compiler: 'cpython-3.12.7',    filename: 'prog.py' },
-  javascript: { compiler: 'nodejs-20.17.0',    filename: 'prog.js' },
-};
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const BACKEND_EXECUTE_API = `${rawApiUrl.replace(/\/+$/, '')}/api/execute`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,111 +14,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const langConfig = LANGUAGE_MAP[language?.toLowerCase()];
-    if (!langConfig) {
+    if (!language) {
       return NextResponse.json(
-        { status: 'Error', output: '', error: `Unsupported language: ${language}`, executionTimeMs: 0 },
+        { status: 'Error', output: '', error: 'Language is required', executionTimeMs: 0 },
         { status: 400 }
       );
     }
 
-    const startTime = Date.now();
+    console.log(`[Execute Route] Proxying code execution request to backend: ${BACKEND_EXECUTE_API}`);
 
-    // Pre-process code for language-specific quirks
-    let processedCode = code;
-
-    // Java: Wandbox names the file 'prog.java', so 'public class Xxx' causes
-    // a filename mismatch. Strip the 'public' keyword from class declarations.
-    if (language?.toLowerCase() === 'java') {
-      processedCode = processedCode.replace(/public\s+class\s+/g, 'class ');
-    }
-
-    // Wandbox API format
-    const wandboxPayload: Record<string, string> = {
-      compiler: langConfig.compiler,
-      code: processedCode,
-      'compiler-option-raw': '',
-      'runtime-option-raw': '',
-    };
-
-    // Add stdin if provided
-    if (input && input.trim()) {
-      wandboxPayload.stdin = input;
-    }
-
-    const response = await fetch(WANDBOX_API, {
+    const response = await fetch(BACKEND_EXECUTE_API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(wandboxPayload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ language, code, input }),
     });
-
-    const executionTimeMs = Date.now() - startTime;
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`[Execute Route] Backend error (${response.status}):`, errorText);
       return NextResponse.json({
         status: 'Error',
         output: '',
-        error: `Execution service error (${response.status}): ${errorText}`,
-        executionTimeMs,
+        error: `Execution service error (${response.status}): ${errorText || 'Internal Server Error'}`,
+        executionTimeMs: 0,
       });
     }
 
     const result = await response.json();
-
-    // Wandbox response fields:
-    // - program_output: stdout from the program
-    // - program_error: stderr from the program
-    // - compiler_output: stdout from compiler (if any)
-    // - compiler_error: stderr from compiler (errors/warnings)
-    // - compiler_message: combined compiler messages
-    // - program_message: combined program messages
-    // - status: exit code (string "0" for success)
-
-    const compilerError = result.compiler_error || '';
-    const programOutput = result.program_output || '';
-    const programError = result.program_error || '';
-    const exitCode = result.status || '0';
-
-    // Handle compilation errors (non-zero compiler exit)
-    if (compilerError && !programOutput && exitCode !== '0') {
-      return NextResponse.json({
-        status: 'Error',
-        output: '',
-        error: `Compilation Error:\n${compilerError}`,
-        executionTimeMs,
-      });
-    }
-
-    // Handle signal (timeout, segfault, etc.)
-    if (result.signal) {
-      return NextResponse.json({
-        status: 'Error',
-        output: programOutput,
-        error: `Process terminated by signal: ${result.signal}`,
-        executionTimeMs,
-      });
-    }
-
-    // Handle runtime errors
-    if (exitCode !== '0') {
-      return NextResponse.json({
-        status: 'Error',
-        output: programOutput,
-        error: programError || compilerError || 'Runtime error (non-zero exit code)',
-        executionTimeMs,
-      });
-    }
-
-    return NextResponse.json({
-      status: 'Success',
-      output: programOutput,
-      error: programError || '',
-      executionTimeMs,
-      memoryUsage: '—',
-    });
+    return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Execute route error:', error);
+    console.error('[Execute Route] Error proxying code execution:', error);
     return NextResponse.json({
       status: 'Error',
       output: '',
