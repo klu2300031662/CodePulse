@@ -221,25 +221,32 @@ public class PlatformAnalyticsService {
         // 3) Problem stats (from user.status)
         try {
             HttpRequest statusReq = HttpRequest.newBuilder()
-                    .uri(URI.create("https://codeforces.com/api/user.status?handle=" + username + "&from=1&count=100000"))
+                    .uri(URI.create("https://codeforces.com/api/user.status?handle=" + username + "&from=1&count=2500"))
                     .header("User-Agent", "Mozilla/5.0")
-                    .timeout(Duration.ofSeconds(15))
+                    .timeout(Duration.ofSeconds(8))
                     .GET().build();
 
             HttpResponse<String> statusRes = httpClient.send(statusReq, HttpResponse.BodyHandlers.ofString());
             if (statusRes.statusCode() == 200) {
-                String body = statusRes.body();
-                Set<String> solvedSet = new HashSet<>();
-                String[] submissions = body.split("\"verdict\":\"OK\"");
-                for (int i = 1; i < submissions.length; i++) {
-                    String chunk = submissions[i - 1];
-                    String contestId = extractInlineField(chunk, "contestId");
-                    String index = extractInlineField(chunk, "index");
-                    if (contestId != null && index != null) {
-                        solvedSet.add(contestId + "-" + index);
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(statusRes.body());
+                if ("OK".equalsIgnoreCase(root.path("status").asText())) {
+                    Set<String> solvedSet = new HashSet<>();
+                    com.fasterxml.jackson.databind.JsonNode resultNode = root.path("result");
+                    if (resultNode.isArray()) {
+                        for (com.fasterxml.jackson.databind.JsonNode sub : resultNode) {
+                            if ("OK".equalsIgnoreCase(sub.path("verdict").asText())) {
+                                com.fasterxml.jackson.databind.JsonNode problem = sub.path("problem");
+                                int contestId = problem.path("contestId").asInt(0);
+                                String index = problem.path("index").asText("");
+                                if (contestId > 0 && !index.isEmpty()) {
+                                    solvedSet.add(contestId + "-" + index);
+                                }
+                            }
+                        }
                     }
+                    result.put("totalSolved", solvedSet.size());
                 }
-                result.put("totalSolved", solvedSet.size());
             }
         } catch (Exception e) {
             logger.warn("Codeforces status failed for '{}': {}", username, e.getMessage());

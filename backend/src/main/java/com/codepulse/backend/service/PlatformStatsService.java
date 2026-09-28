@@ -99,49 +99,41 @@ public class PlatformStatsService {
         PlatformStats stats = new PlatformStats();
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://codeforces.com/api/user.status?handle=" + username + "&from=1&count=100000"))
+                    .uri(URI.create("https://codeforces.com/api/user.status?handle=" + username + "&from=1&count=2500"))
                     .header("User-Agent", "Mozilla/5.0")
-                    .timeout(Duration.ofSeconds(15))
+                    .timeout(Duration.ofSeconds(8))
                     .GET()
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
-                String body = response.body();
-                if (!body.contains("\"status\":\"OK\"")) {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(response.body());
+                if (!"OK".equalsIgnoreCase(root.path("status").asText())) {
                     stats.error = "Codeforces user '" + username + "' not found";
                     return stats;
                 }
 
-                // Count unique solved problems by (contestId, index)
                 Set<String> solvedSet = new HashSet<>();
                 int easy = 0, medium = 0, hard = 0;
 
-                // Parse submissions — look for verdict: "OK"
-                String[] submissions = body.split("\"verdict\":\"OK\"");
-                for (int i = 1; i < submissions.length; i++) {
-                    String chunk = submissions[i];
-                    // Go backwards to find the problem info
-                    String precedingChunk = submissions[i - 1];
-                    
-                    // Extract contestId and index from the preceding chunk
-                    String contestId = extractField(precedingChunk, "contestId");
-                    String index = extractField(precedingChunk, "index");
-                    String ratingStr = extractField(precedingChunk, "rating");
-                    
-                    if (contestId != null && index != null) {
-                        String key = contestId + "-" + index;
-                        if (!solvedSet.contains(key)) {
-                            solvedSet.add(key);
-                            int rating = 0;
-                            try {
-                                if (ratingStr != null) rating = Integer.parseInt(ratingStr);
-                            } catch (NumberFormatException ignored) {}
-                            
-                            if (rating <= 1200) easy++;
-                            else if (rating <= 1800) medium++;
-                            else hard++;
+                com.fasterxml.jackson.databind.JsonNode resultNode = root.path("result");
+                if (resultNode.isArray()) {
+                    for (com.fasterxml.jackson.databind.JsonNode sub : resultNode) {
+                        if ("OK".equalsIgnoreCase(sub.path("verdict").asText())) {
+                            com.fasterxml.jackson.databind.JsonNode problem = sub.path("problem");
+                            int contestId = problem.path("contestId").asInt(0);
+                            String index = problem.path("index").asText("");
+                            if (contestId > 0 && !index.isEmpty()) {
+                                String key = contestId + "-" + index;
+                                if (solvedSet.add(key)) {
+                                    int rating = problem.path("rating").asInt(0);
+                                    if (rating <= 1200) easy++;
+                                    else if (rating <= 1800) medium++;
+                                    else hard++;
+                                }
+                            }
                         }
                     }
                 }

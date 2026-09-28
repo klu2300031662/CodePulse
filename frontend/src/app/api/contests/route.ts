@@ -146,10 +146,10 @@ async function fetchFallbackContests(): Promise<UnifiedContest[]> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000);
 
-    const query = `{ allContests { title startTime duration titleSlug } }`;
+    const query = `{ upcomingContests { title startTime duration titleSlug } }`;
     const res = await fetch("https://leetcode.com/graphql", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
       body: JSON.stringify({ query }),
       signal: controller.signal,
     });
@@ -157,17 +157,9 @@ async function fetchFallbackContests(): Promise<UnifiedContest[]> {
 
     if (res.ok) {
       const data = await res.json();
-      const allContests = data?.data?.allContests || [];
+      const upcoming = data?.data?.upcomingContests || [];
 
-      // Filter to upcoming/ongoing only
-      const upcoming = allContests
-        .filter((c: any) => {
-          const endTime = (c.startTime + c.duration) * 1000;
-          return endTime > now;
-        })
-        .slice(0, 10);
-
-      for (const c of upcoming) {
+      for (const c of upcoming.slice(0, 10)) {
         const startMs = c.startTime * 1000;
         contests.push({
           platform: "LeetCode",

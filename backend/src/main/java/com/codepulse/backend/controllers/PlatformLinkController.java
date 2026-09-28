@@ -56,19 +56,25 @@ public class PlatformLinkController {
                 .orElseThrow(() -> new UnauthorizedException("User account not found. Please log in again."));
     }
 
-    // ── GET /api/platforms — List all linked platforms with live sync ──
+    // ── GET /api/platforms — List all linked platforms (instant response + async background sync) ──
     @GetMapping
     public ResponseEntity<?> getUserPlatforms() {
         User user = getCurrentUser();
         List<PlatformLink> links = platformLinkRepository.findByUser(user);
 
-        // Auto-sync all platforms that haven't been synced in 5+ minutes
+        // Auto-sync platforms asynchronously in background if not synced in 15+ minutes
         for (PlatformLink link : links) {
             boolean shouldSync = link.getLastSyncedAt() == null ||
-                    link.getLastSyncedAt().isBefore(LocalDateTime.now().minusMinutes(5));
+                    link.getLastSyncedAt().isBefore(LocalDateTime.now().minusMinutes(15));
 
             if (shouldSync) {
-                syncPlatformData(link);
+                java.util.concurrent.CompletableFuture.runAsync(() -> {
+                    try {
+                        syncPlatformData(link);
+                    } catch (Exception e) {
+                        logger.warn("Async auto-sync error for platform {}: {}", link.getPlatformName(), e.getMessage());
+                    }
+                });
             }
         }
 
